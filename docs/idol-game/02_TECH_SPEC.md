@@ -185,7 +185,7 @@ export function randRange(state, min, max)  // 정수/실수 헬퍼
 
 | 키 | 내용 |
 |---|---|
-| `idolboy.autosave` | `SaveFile` — `confirmReport`, `chooseOption`, `confirmComeback`, `confirmAward` 직후 UI가 자동 저장 |
+| `idolboy.autosave` | `SaveFile` — `confirmReport`, `chooseOption`, `confirmComeback`, `confirmAward` 직후 UI가 자동 저장. 난수 결과가 확정되는 `requestDebutEval`, `confirmDebutEval`, `chooseComeback`, `upgradeTrainer` 직후에도 저장한다 (새로고침으로 점수를 다시 뽑는 세이브 스커밍 방지) |
 | `idolboy.slot.1` ~ `idolboy.slot.3` | 수동 저장 |
 | `idolboy.endings` | `EndingGalleryEntry[]` (중복 id는 최신 날짜만) |
 | `idolboy.settings` | `{ speed: 'normal' | 'fast' }` |
@@ -214,7 +214,7 @@ export function randRange(state, min, max)  // 정수/실수 헬퍼
 | `DialogueBox` | text, speaker | 말풍선 |
 | `WeekPlanner` | plan, activities, onPick(slot), preview | 4슬롯 + 예상 지출/체력 + "모두 같은 활동" 버튼 |
 | `ActivityPicker` | list(getAvailableActivities), onSelect, onClose | 하단 시트, 분류 탭, 불가 사유 표시 |
-| `ResolveLog` | log, speed, onDone | 주차별 로그를 순차 표시 (연출), 완료 시 콜백. 이벤트 phase에선 멈춤 |
+| `ResolveLog` | log, visibleCount, weekIndex, speed, onToggleSpeed, done | 표시 전용. 로그 공개 타이머와 step 호출 루프는 `play/page.tsx`가 단독 소유한다 (StrictMode 이중 실행으로 한 틱에 두 주가 진행되는 것을 방지) |
 | `EventModal` | event, state, onChoose | 배경/CG/포트레이트 + 본문 + 선택지(조건부 힌트 표시) |
 | `MonthReport` | report, onNext | 전후 비교, 수입/지출, 대사 |
 | `DebutEvalScreen` | result, onConfirm | 점수 연출, 통과/실패 |

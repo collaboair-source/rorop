@@ -1,0 +1,104 @@
+/* 「별이 되어줘」 게임 전용 스타일. 전역 globals.css 는 건드리지 않는다. */
+
+.idol-root {
+  font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Pretendard",
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.idol-root ::selection {
+  background: #a78bfa;
+  color: #0b1020;
+}
+
+/* 별 그라데이션 (타이틀 키비주얼 폴백) */
+.idol-starfield {
+  background-color: #0b1020;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 22%, rgba(238, 240, 255, 0.9), transparent 60%),
+    radial-gradient(1.5px 1.5px at 78% 14%, rgba(238, 240, 255, 0.8), transparent 60%),
+    radial-gradient(1px 1px at 34% 64%, rgba(238, 240, 255, 0.7), transparent 60%),
+    radial-gradient(1.5px 1.5px at 62% 76%, rgba(238, 240, 255, 0.75), transparent 60%),
+    radial-gradient(1px 1px at 88% 52%, rgba(238, 240, 255, 0.6), transparent 60%),
+    radial-gradient(1px 1px at 20% 84%, rgba(238, 240, 255, 0.55), transparent 60%),
+    radial-gradient(1.5px 1.5px at 50% 34%, rgba(238, 240, 255, 0.65), transparent 60%),
+    radial-gradient(120% 90% at 20% 0%, rgba(167, 139, 250, 0.35), transparent 62%),
+    radial-gradient(110% 80% at 90% 30%, rgba(94, 234, 212, 0.22), transparent 60%),
+    linear-gradient(180deg, #1a2145 0%, #0b1020 100%);
+}
+
+@keyframes idolFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes idolFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes idolSheetUp {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes idolPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.idol-fade-up {
+  animation: idolFadeUp 240ms ease-out both;
+}
+
+.idol-fade-in {
+  animation: idolFadeIn 260ms ease-out both;
+}
+
+.idol-sheet-up {
+  animation: idolSheetUp 200ms ease-out both;
+}
+
+.idol-pulse {
+  animation: idolPulse 1.2s ease-in-out infinite;
+}
+
+.idol-no-scrollbar {
+  scrollbar-width: none;
+}
+
+.idol-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idol-fade-up,
+  .idol-fade-in,
+  .idol-sheet-up,
+  .idol-pulse {
+    animation: none;
+  }
+}
