@@ -76,6 +76,9 @@ export const MAX_STAMINA_MAX = 150;
 
 export const BOND_MIN = 0;
 export const BOND_MAX = 100;
+/** 호감도 소프트캡: 이 값 이상에서는 증가분이 ×BOND_SOFT_CAP_MUL 로 줄어든다 (감소는 그대로) */
+export const BOND_SOFT_CAP = 80;
+export const BOND_SOFT_CAP_MUL = 0.5;
 export const REPUTATION_MIN = 0;
 export const REPUTATION_MAX = 100;
 /** 평판이 이 값 이하면 즉시 엔딩 scandal_fall */

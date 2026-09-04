@@ -202,7 +202,7 @@ const RAW = [
     money: 80,
     stamina: -15,
     stress: 5,
-    bond: 2,
+    bond: 1,
     reputation: 1,
     fansFormula: "fansign",
     requires: { debuted: true },

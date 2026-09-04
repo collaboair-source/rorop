@@ -58,9 +58,17 @@ describe("고정 이벤트", () => {
     expect(chosen.seenEvents.first_evaluation.count).toBe(1);
   });
 
-  it("gift 는 6·12·18·24·30개월차에 잡혀 있다", () => {
+  it("gift 는 12·24개월차에만 잡혀 있다", () => {
     const gift = EVENTS.find((e) => e.id === "gift");
-    expect(gift?.trigger.month).toEqual([6, 12, 18, 24, 30]);
+    expect(gift?.trigger.month).toEqual([12, 24]);
+  });
+
+  it("18개월차에는 최후통첩만 남고 선물 이벤트는 오지 않는다", () => {
+    const atEighteen = EVENTS.filter((e) => {
+      const month = e.trigger.month;
+      return Array.isArray(month) ? month.includes(18) : month === 18;
+    }).map((e) => e.id);
+    expect(atEighteen).toEqual(["debut_deadline_notice"]);
   });
 });
 

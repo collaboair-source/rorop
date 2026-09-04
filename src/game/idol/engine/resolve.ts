@@ -266,10 +266,19 @@ export function addFans(draft: GameState, amount: number): void {
   draft.idol.social.fans = Math.max(0, Math.round(draft.idol.social.fans + amount));
 }
 
+/**
+ * 호감도 변화.
+ * 증가분에는 성격 bondMul 을 곱하고, 적용 전 호감도가 소프트캡 이상이면 다시 ×BOND_SOFT_CAP_MUL.
+ * 감소분은 배수 없이 그대로 적용한다. 소프트캡이 반올림에 먹히지 않도록 소수 1자리로 저장한다.
+ */
 export function addBond(draft: GameState, amount: number): void {
-  const p = getPersonality(draft.idol.personality);
-  const applied = amount > 0 ? amount * p.bondMul : amount;
-  draft.idol.social.bond = Math.round(clamp(draft.idol.social.bond + applied, B.BOND_MIN, B.BOND_MAX));
+  const current = draft.idol.social.bond;
+  let applied = amount;
+  if (amount > 0) {
+    applied = amount * getPersonality(draft.idol.personality).bondMul;
+    if (current >= B.BOND_SOFT_CAP) applied *= B.BOND_SOFT_CAP_MUL;
+  }
+  draft.idol.social.bond = round1(clamp(current + applied, B.BOND_MIN, B.BOND_MAX));
 }
 
 export function addReputation(draft: GameState, amount: number): void {

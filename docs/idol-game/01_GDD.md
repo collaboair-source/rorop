@@ -321,7 +321,7 @@ gain = BASE(4) × talent × trainerMul × dim(skill) × condMul × personalityMu
 | E06 `rap_cypher` | 언더 싸이퍼 초대 | conditional 랩 ≥ 40, trainee, 6%/주, cooldown 4 | 홍대 싸이퍼 무대 제안 | ① 참가 → 랩 +4, 팬 +500, 평판 −2, 스트레스 +5 ② 거절 → 호감도 +1 |
 | E07 `sns_viral` | 영상이 떴다 | conditional 활동 `sns_content`, 12%/주, cooldown 3 | 업로드한 영상이 알고리즘을 탔다 | ① 후속 콘텐츠 → 팬 ×1.5 (최소 +1,000), 예능감 +2, 체력 −10 ② 조용히 지켜봄 → 팬 ×1.3 (최소 +600) |
 | E08 `sns_hate` | 악플 | conditional 활동 `sns_content`, 10%/주, cooldown 2 | 외모 비하 댓글이 달렸다 | ① 무시 → 스트레스 +8 ② 매니저와 면담 → 호감도 +3, 스트레스 +2 ③ 직접 반박 → 평판 −5, 스트레스 −5 |
-| E09 `birthday` | 하람의 생일 | fixed 7개월차, 19개월차, 31개월차 | 생일이다 | ① 케이크 → 자금 −5, 호감도 +5 ② 파티 → 자금 −30, 호감도 +8, 스트레스 −10 ③ 그냥 지나감 → 호감도 −5 |
+| E09 `birthday` | 하람의 생일 | fixed 7개월차, 19개월차, 31개월차 | 생일이다 | ① 케이크 → 자금 −5, 호감도 +3 ② 파티 → 자금 −30, 호감도 +5, 스트레스 −10 ③ 그냥 지나감 → 호감도 −5 |
 | E10 `homesick` | 향수병 | conditional 스트레스 ≥ 50, trainee, 8%/주, cooldown 6 | 밤에 혼자 전화하는 걸 봤다 | ① 고향에 보내줌 → 자금 −20, 체력 +20, 스트레스 −25, 호감도 +4 ② 다독임 → 스트레스 −8, 호감도 +2 |
 | E11 `survival_show_offer` | 서바이벌 프로그램 섭외 | random 8~14개월차, trainee, 10%/주, once | 방송사 서바이벌 출연 제안 | ① 출연 → 팬 +(20,000 + 코어평균×500), 스트레스 +15, 체력 −30, 평판 +3 ② 거절 → 호감도 +2 |
 | E12 `company_crisis` | 회사 자금난 | fixed 10개월차 | 대표가 지원금을 줄여야 한다고 한다 | ① 사비로 버팀 → 자금 −100, 호감도 +5 ② 지원 삭감 수용 → `supportCutMonthsLeft=3`, 스트레스 +5 |
@@ -347,9 +347,9 @@ gain = BASE(4) × talent × trainerMul × dim(skill) × condMul × personalityMu
 | E24 `overseas_fanmeet` | 해외 팬미팅 | conditional 팬 ≥ 300,000, 6%/주, once | 일본·동남아 팬미팅 투어 제안 | ① 간다 → 자금 +400, 팬 +50,000, 체력 −35, 스트레스 +10 ② 국내 집중 → 팬 +5,000, 호감도 +1 |
 | E25 `anti_cafe` | 안티 카페 | conditional 평판 ≤ 40, 팬 ≥ 100,000, 6%/주, cooldown 5 | 안티 카페가 생겼다 | ① 팬들에게 편지 → 평판 +5, 호감도 +2 ② 무시 → 스트레스 +5 |
 | E26 `self_produce` | 자작곡 도전 | conditional 랩 ≥ 70 또는 보컬 ≥ 70, debuted, 6%/주, once | 다음 타이틀곡을 직접 쓰고 싶다고 한다 | ① 도전 → `flag:self_produced`(다음 컴백 1회), 스트레스 +10, 호감도 +4 ② 회사 곡으로 → 스트레스 −3 |
-| E27 `slump` | 슬럼프 고백 | conditional 스트레스 ≥ 80, debuted, 15%/주, cooldown 6 | "요즘 무대가 무서워요" | ① 휴식기 선언 → 팬 −10%, 스트레스 −40, 호감도 +8, 체력 최대치로 ② 견디자 → 스트레스 +10, 전 능력치 −2 |
+| E27 `slump` | 슬럼프 고백 | conditional 스트레스 ≥ 80, debuted, 15%/주, cooldown 6 | "요즘 무대가 무서워요" | ① 휴식기 선언 → 팬 −10%, 스트레스 −40, 호감도 +4, 체력 최대치로 ② 견디자 → 스트레스 +10, 전 능력치 −2 |
 | E28 `world_tour_offer` | 월드투어 | conditional 팬 ≥ 1,500,000, 6%/주, once | 해외 프로모터의 투어 제안 | ① 간다 → 자금 +2000, 팬 +400,000, 체력 −40, 스트레스 +20, CG `world_tour` ② 국내 집중 → 팬 +100,000 |
-| E29 `bond_confession` | 진심 | conditional 호감도 ≥ 80, debuted, once | "매니저님 없었으면 저 여기 없었어요" | ① → 호감도 +10, 스트레스 −10, CG `bond_promise` |
+| E29 `bond_confession` | 진심 | conditional 호감도 ≥ 80, debuted, once | "매니저님 없었으면 저 여기 없었어요" | ① → 호감도 +5, 스트레스 −10, CG `bond_promise` |
 | E30 `charity` | 기부·봉사 제안 | conditional 평판 < 70, debuted, 5%/주, cooldown 6 | 소아병동 봉사 요청 | ① 참여 → 자금 −100, 평판 +10, 팬 +5,000, 호감도 +2 ② 일정상 거절 → 스트레스 −2 |
 | E39 `dance_cover_viral` | 댄스 커버 화제 | conditional 활동 `sns_content`, 댄스 ≥ 60, 10%/주, cooldown 3 | 커버 영상이 챌린지로 번졌다 | ① → 팬 +3,000×phaseMul, 예능감 +1 |
 | E40 `manager_burnout` | 매니저인 나도 | fixed 20개월차 | 플레이어가 지친 모습을 하람이 눈치챈다 | ① 하람의 위로를 받아들임 → 호감도 +6 ② 괜찮은 척 → 호감도 +1 |
@@ -361,7 +361,7 @@ gain = BASE(4) × talent × trainerMul × dim(skill) × condMul × personalityMu
 | E31 `stress_break` | 한계 | conditional 스트레스 = 100 (엔진 규칙에서 강제 발생) | "그만두고 싶어요" | ① 붙잡는다 → check 호감도 ≥ 40: 성공 슬럼프 처리(스트레스 50, 전 능력치 −3, 체력 최대) / 실패 엔딩 `burnout_leave` ② 놓아준다 → 엔딩 `burnout_leave` |
 | E32 `stamina_collapse` | 쓰러짐 | conditional 체력 ≤ 0 (엔진 규칙에서 강제 발생) | 연습실에서 쓰러졌다 | ① 병원 → 자금 −50, 체력 60, 스트레스 −10 ② 버틴다 → 부상, 스트레스 +15, 체력 30 |
 | E33 `money_crisis` | 생활고 | conditional 월말 자금 < 30, trainee, cooldown 4 | 밥값이 없다 | ① 회사 가불 → 자금 +100, `debtMonthsLeft=4` ② 알바로 버팀 → 스트레스 +5, 호감도 +1 |
-| E35 `gift` | 선물 | fixed 6·12·18·24·30개월차 | 하람에게 뭔가 해주고 싶다 | ① 운동화 → 자금 −30, 호감도 +4 ② 손편지 → 호감도 +2, 스트레스 −3 ③ 다음에 → 없음 |
+| E35 `gift` | 선물 | fixed 12·24개월차 | 하람에게 뭔가 해주고 싶다 | ① 운동화 → 자금 −30, 호감도 +4 ② 손편지 → 호감도 +2, 스트레스 −3 ③ 다음에 → 없음 |
 
 (E34는 엔진 규칙 "평판 ≤ 10 → 즉시 엔딩"으로 대체, 별도 이벤트 없음.)
 

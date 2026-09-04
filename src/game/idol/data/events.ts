@@ -259,13 +259,13 @@ const RAW = [
       {
         id: "cake",
         label: "작은 케이크를 사 간다",
-        effects: { money: -5, bond: 5 },
+        effects: { money: -5, bond: 3 },
         resultText: "초 두 개를 꽂고 연습실 불을 껐다. 하람은 소원을 말하지 않았다.",
       },
       {
         id: "party",
         label: "연습생들을 모아 파티를 연다",
-        effects: { money: -30, bond: 8, stress: -10 },
+        effects: { money: -30, bond: 5, stress: -10 },
         resultText: "치킨 세 마리와 노래방 두 시간. 하람이 그렇게 크게 웃는 건 처음 봤다.",
       },
       {
@@ -836,7 +836,7 @@ const RAW = [
       {
         id: "break",
         label: "활동을 멈추고 휴식기를 선언한다",
-        effects: { fansPct: -0.1, stress: -40, bond: 8, fullStamina: true },
+        effects: { fansPct: -0.1, stress: -40, bond: 4, fullStamina: true },
         resultText: "공백은 숫자로 돌아왔다. 대신 다시 나온 하람의 눈은 예전 같았다.",
       },
       {
@@ -885,7 +885,7 @@ const RAW = [
       {
         id: "answer",
         label: "끝까지 같이 가자고 답한다",
-        effects: { bond: 10, stress: -10, flags: { cg_bond_promise: true } },
+        effects: { bond: 5, stress: -10, flags: { cg_bond_promise: true } },
         resultText: "그날 이후 하람은 무대에서 종종 카메라가 아닌 쪽을 봤다. 그쪽에는 늘 매니저가 서 있었다.",
       },
     ],
@@ -1062,7 +1062,7 @@ const RAW = [
     text: "문득 하람에게 뭐라도 해주고 싶어졌다. 대단한 건 아니어도 좋을 것 같았다.",
     emotion: "happy",
     bg: "office",
-    trigger: { kind: "fixed_month", month: [6, 12, 18, 24, 30] },
+    trigger: { kind: "fixed_month", month: [12, 24] },
     priority: 100,
     choices: [
       {

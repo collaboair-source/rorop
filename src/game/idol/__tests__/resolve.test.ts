@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import * as E from "../engine";
-import { dimOf } from "../engine/resolve";
+import { addBond, dimOf } from "../engine/resolve";
 import type { ActivityId, GameState } from "../types";
 import { forcePlan, mutate, newGame } from "./helpers";
 
@@ -202,10 +202,93 @@ describe("주차 해결", () => {
     expect(upgraded.economy.money).toBe(700);
   });
 
+  it("팬사인회는 호감도 +1, 평판 +1 과 팬을 준다", () => {
+    const debuted = mutate(newGame(), (d) => {
+      d.career.debuted = true;
+      d.career.phase = "rookie";
+      d.idol.social.fans = 50_000;
+    });
+    const after = oneWeek(debuted, "fansign");
+    expect(after.idol.social.bond).toBe(21);
+    expect(after.idol.social.reputation).toBe(51);
+    expect(after.idol.social.fans).toBeGreaterThan(50_000);
+  });
+
   it("엔진 함수는 입력 상태를 변경하지 않는다", () => {
     const base = newGame({ background: "vocal_prodigy" });
     const before = JSON.stringify(base);
     oneWeek(base, "lesson_vocal");
     expect(JSON.stringify(base)).toBe(before);
+  });
+});
+
+describe("호감도 소프트캡", () => {
+  function bondAt(value: number, personality: "diligent" | "optimist" = "diligent"): GameState {
+    return mutate(newGame({ personality }), (d) => {
+      d.idol.social.bond = value;
+    });
+  }
+
+  it("소프트캡(80) 아래에서는 증가분이 그대로 들어간다", () => {
+    const draft = bondAt(79);
+    addBond(draft, 4);
+    expect(draft.idol.social.bond).toBe(83);
+  });
+
+  it("소프트캡 이상에서는 증가분이 절반이 된다", () => {
+    const draft = bondAt(80);
+    addBond(draft, 4);
+    expect(draft.idol.social.bond).toBe(82);
+  });
+
+  it("감소분에는 소프트캡을 적용하지 않는다", () => {
+    const draft = bondAt(90);
+    addBond(draft, -4);
+    expect(draft.idol.social.bond).toBe(86);
+  });
+
+  it("+1 의 절반이 반올림으로 사라지지 않는다 (소수 1자리 저장)", () => {
+    const draft = bondAt(85);
+    addBond(draft, 1);
+    expect(draft.idol.social.bond).toBe(85.5);
+    addBond(draft, 1);
+    expect(draft.idol.social.bond).toBe(86);
+  });
+
+  it("성격 배수를 곱한 뒤에 소프트캡이 적용된다 (낙천형 ×1.2)", () => {
+    const below = bondAt(70, "optimist");
+    addBond(below, 4);
+    expect(below.idol.social.bond).toBeCloseTo(74.8, 5);
+
+    const above = bondAt(80, "optimist");
+    addBond(above, 4);
+    expect(above.idol.social.bond).toBeCloseTo(82.4, 5);
+  });
+
+  it("호감도는 0~100 을 벗어나지 않는다", () => {
+    const high = bondAt(99.8);
+    addBond(high, 10);
+    expect(high.idol.social.bond).toBe(100);
+
+    const low = bondAt(2);
+    addBond(low, -10);
+    expect(low.idol.social.bond).toBe(0);
+  });
+
+  it("팬사인회를 소프트캡 위에서 하면 호감도가 +0.5 만 오른다", () => {
+    const debuted = mutate(newGame(), (d) => {
+      d.career.debuted = true;
+      d.career.phase = "rookie";
+      d.idol.social.fans = 50_000;
+      d.idol.social.bond = 85;
+    });
+    const after = oneWeek(debuted, "fansign");
+    expect(after.idol.social.bond).toBe(85.5);
+  });
+
+  it("호감도 구간 판정은 소수여도 그대로 동작한다", () => {
+    expect(E.getBondTier(bondAt(85.5))).toBe(3);
+    expect(E.getBondTier(bondAt(84.9))).toBe(2);
+    expect(E.getBondTier(bondAt(29.9))).toBe(0);
   });
 });

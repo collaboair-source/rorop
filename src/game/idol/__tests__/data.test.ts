@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { ACTIVITIES } from "../data/activities";
+import { ACTIVITIES, getActivity } from "../data/activities";
 import { BACKGROUNDS } from "../data/backgrounds";
 import { CONCEPTS } from "../data/concepts";
 import { DIALOGUE } from "../data/dialogue";
@@ -15,6 +15,7 @@ import {
   CONCEPT_IDS,
   ENDING_IDS,
   PERSONALITY_IDS,
+  type ActivityId,
   type EndingId,
   type Mood,
 } from "../types";
@@ -122,6 +123,44 @@ describe("이벤트 데이터 규약", () => {
     expect(atEnd).toEqual(["money_crisis"]);
   });
 
+  it("이벤트 한 번이 주는 호감도는 +6 을 넘지 않고, 재발 가능한 이벤트는 +5 를 넘지 않는다", () => {
+    for (const event of EVENTS) {
+      const best = Math.max(0, ...event.choices.map((c) => c.effects.bond ?? 0));
+      expect(best, `${event.id}`).toBeLessThanOrEqual(6);
+      const months = event.trigger.month;
+      const repeatable =
+        !event.trigger.once &&
+        (typeof event.trigger.cooldownMonths === "number" || Array.isArray(months) || !months);
+      if (repeatable) expect(best, `${event.id} (재발 가능)`).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it("호감도 보상이 큰 이벤트의 값이 GDD 9.2 표와 같다", () => {
+    const bondOf = (eventId: string, choiceId: string): number => {
+      const choice = EVENTS.find((e) => e.id === eventId)?.choices.find((c) => c.id === choiceId);
+      return choice?.effects.bond ?? 0;
+    };
+    expect(bondOf("birthday", "cake")).toBe(3);
+    expect(bondOf("birthday", "party")).toBe(5);
+    expect(bondOf("birthday", "skip")).toBe(-5);
+    expect(bondOf("slump", "break")).toBe(4);
+    expect(bondOf("bond_confession", "answer")).toBe(5);
+    expect(bondOf("gift", "shoes")).toBe(4);
+    expect(bondOf("gift", "letter")).toBe(2);
+  });
+
+  it("고정 이벤트의 발생 월이 GDD 표와 같다", () => {
+    const monthsOf = (id: string): number | number[] | undefined =>
+      EVENTS.find((e) => e.id === id)?.trigger.month;
+    expect(monthsOf("first_evaluation")).toBe(3);
+    expect(monthsOf("company_crisis")).toBe(10);
+    expect(monthsOf("rival_debut")).toBe(14);
+    expect(monthsOf("debut_deadline_notice")).toBe(18);
+    expect(monthsOf("manager_burnout")).toBe(20);
+    expect(monthsOf("birthday")).toEqual([7, 19, 31]);
+    expect(monthsOf("gift")).toEqual([12, 24]);
+  });
+
   it("fixed_month 이벤트는 month 를 가진다", () => {
     for (const event of EVENTS) {
       if (event.trigger.kind !== "fixed_month") continue;
@@ -173,5 +212,13 @@ describe("활동 데이터 규약", () => {
       if (!activity.fansFormula) continue;
       expect(["promo", "work"]).toContain(activity.category);
     }
+  });
+
+  it("호감도를 주는 활동의 값이 GDD 5절 표와 같다", () => {
+    const bondOf = (id: ActivityId): number => getActivity(id).bond ?? 0;
+    expect(bondOf("fansign")).toBe(1);
+    expect(bondOf("busking")).toBe(1);
+    expect(bondOf("trip")).toBe(3);
+    expect(bondOf("counsel")).toBe(4);
   });
 });
