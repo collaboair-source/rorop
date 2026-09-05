@@ -38,3 +38,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 단일 HTML 게임 빌드 산출물 (npm run build:standalone 으로 재생성)
+/tools/idol-standalone/dist/

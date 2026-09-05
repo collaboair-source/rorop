@@ -1,0 +1,14 @@
+@import "tailwindcss" source(none);
+@import "../../src/app/idol/idol.css";
+
+@source "../../src/app/idol";
+@source "../../src/components/idol";
+
+/* 단일 HTML 로 배포될 때 뒤 배경까지 어둡게 (Next 앱에서는 루트 layout 이 담당) */
+html,
+body {
+  margin: 0;
+  background: #0b1020;
+  color: #eef0ff;
+  color-scheme: dark;
+}
