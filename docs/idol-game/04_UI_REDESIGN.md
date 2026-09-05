@@ -42,7 +42,9 @@ v2의 답: **화면의 절반을 아이돌에게 준다. 관리 화면은 팬 �
 --surface-2: #F3EEF6;    /* 라일락 그레이, 비활성·구분 */
 --ink: #1E1A2E;
 --ink-2: #5B5670;        /* 보조 텍스트 */
---ink-3: #9A94B0;        /* 캡션·비활성 */
+--ink-3: #726C85;        /* 캡션·비활성 — 4.7:1 (초안 #9A94B0 은 2.8:1 로 기준 미달이라 구현 시 조정) */
+--on-accent: #FFFFFF;    /* 코랄 채움 위 글자 */
+--on-media: #FFFFFF;     /* 이미지 스크림 위 글자 */
 --line: #E7E0EE;
 --accent: #FF6B8A;       /* 하람 공식색 */
 --accent-ink: #D6335A;   /* 밝은 바탕 위 텍스트용 코랄 (대비 확보) */
@@ -60,7 +62,7 @@ v2의 답: **화면의 절반을 아이돌에게 준다. 관리 화면은 팬 �
   --surface-2: rgba(255,255,255,0.10);
   --ink: #F6F2FF;
   --ink-2: #B9B2D6;
-  --ink-3: #6F6890;
+  --ink-3: #8A83AD;      /* 5.4:1 (초안 #6F6890 은 3.7:1) */
   --line: rgba(255,255,255,0.12);
   --accent-ink: #FF8FA6;
   --accent-soft: rgba(255,107,138,0.18);
@@ -287,3 +289,17 @@ v2의 답: **화면의 절반을 아이돌에게 준다. 관리 화면은 팬 �
 4. 앨범(save.ts 확장, 획득 토스트, 라우트) → 저장 시트.
 5. 단일 HTML 빌드(`tools/idol-standalone`)에 폰트 링크·`/idol/album` 라우트 반영.
 6. 검증: `npx tsc --noEmit`, `npm test`, `npm run build`, `npm run build:standalone`, Playwright 스모크(이미지 0장, 390×844)로 전 화면 스크린샷 14장 이상 (`docs/idol-game/screenshots/v2_*.png`), 콘솔 오류 0, 가로 스크롤 0.
+
+---
+
+## 7. 구현 결과와 백로그 (2026-09-05)
+
+v2 구현 완료(스크린샷 `v2_01`~`v2_21`, `v2_web_01`~`06`). 구현 중 확인된 계약 개선 후보 — 엔진·저장 계약을 손볼 때 함께 반영한다.
+
+| 항목 | 현재 우회 | 개선안 |
+|---|---|---|
+| 이벤트 판정(check) 성공/실패를 UI 가 알 수 없음 | 결과 문구에 성공 문장이 포함되는지로 판정 | `UIState.lastCheckPassed: boolean \| null` |
+| 주차 로그가 문자열이라 파싱 필요 | `"{week}주차: {label} — …"` 정규식 | `LogEntry.activityId?: ActivityId` |
+| 컴백 결과 문구에 순위가 중복 | 그대로 노출 | `ComebackRecord.text` 에서 순위 문장 분리 |
+| 저장 슬롯 썸네일의 표정 | `neutral` 고정 | `SaveSlotMeta.emotion` |
+| 앨범 획득 시각 없음 | 엔딩 카드만 표시 | `idolboy.album` 을 `Record<id, ISO>` 로 |

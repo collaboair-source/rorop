@@ -1,14 +1,16 @@
 /**
  * 단일 HTML 빌드용 라우터 — Next.js 의 next/navigation 을 대체한다.
  *
- * 게임은 /idol, /idol/new, /idol/play, /idol/endings 네 경로만 쓰고 router.push/replace 만 호출한다.
+ * 게임은 /idol, /idol/new, /idol/play, /idol/album, /idol/endings 다섯 경로만 쓰고
+ * router.push/replace 만 호출한다.
  * 여기서는 그 경로를 해시(#/idol/play)로 표현해 서버 없이 동작하게 한다.
+ * 쿼리(#/idol/album?tab=ending)는 주소에 그대로 남겨 앨범 페이지가 읽을 수 있게 한다.
  * vite.config.mts 가 "next/navigation" import 를 이 파일로 치환한다.
  */
 
 import { useSyncExternalStore } from "react";
 
-export const ROUTES = ["/idol", "/idol/new", "/idol/play", "/idol/endings"] as const;
+export const ROUTES = ["/idol", "/idol/new", "/idol/play", "/idol/album", "/idol/endings"] as const;
 export type Route = (typeof ROUTES)[number];
 
 const DEFAULT_ROUTE: Route = "/idol";
@@ -59,7 +61,10 @@ export function useRoute(): Route {
 
 function navigate(path: string, replace: boolean): void {
   const target = normalize(path);
-  const url = `${window.location.pathname}${window.location.search}#${target}`;
+  // 쿼리는 해시에 그대로 남긴다 (앨범의 ?tab=ending 등)
+  const raw = path.replace(/^#/, "");
+  const query = raw.includes("?") ? `?${raw.split("?").slice(1).join("?")}` : "";
+  const url = `${window.location.pathname}${window.location.search}#${target}${query}`;
   try {
     if (replace) window.history.replaceState(null, "", url);
     else window.history.pushState(null, "", url);

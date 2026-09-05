@@ -15,6 +15,7 @@ import type {
 export const SAVE_KEY_AUTO = "idolboy.autosave";
 export const SAVE_KEY_ENDINGS = "idolboy.endings";
 export const SAVE_KEY_SETTINGS = "idolboy.settings";
+export const SAVE_KEY_ALBUM = "idolboy.album";
 export const SAVE_SLOTS = [1, 2, 3] as const;
 export type SaveSlot = (typeof SAVE_SLOTS)[number];
 
@@ -211,6 +212,46 @@ export function recordEnding(state: GameState): EndingGalleryEntry[] {
 
 export function clearEndings(): boolean {
   return remove(SAVE_KEY_ENDINGS);
+}
+
+// ---------------------------------------------------------------------------
+// 포토카드 앨범 (04_UI_REDESIGN 2.2)
+// ---------------------------------------------------------------------------
+
+/** 획득한 포토카드 id 목록 (중복 없음, 획득 순서 유지) */
+export function loadAlbum(): string[] {
+  const raw = read(SAVE_KEY_ALBUM);
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const out: string[] = [];
+    for (const value of parsed) {
+      if (typeof value === "string" && !out.includes(value)) out.push(value);
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/** 카드를 연다. 반환값은 **이번에 새로 열린 것만** (연출·토스트용) */
+export function unlockCards(ids: string[]): string[] {
+  if (ids.length === 0) return [];
+  const owned = loadAlbum();
+  const gained: string[] = [];
+  for (const id of ids) {
+    if (typeof id !== "string" || id.length === 0) continue;
+    if (owned.includes(id) || gained.includes(id)) continue;
+    gained.push(id);
+  }
+  if (gained.length === 0) return [];
+  write(SAVE_KEY_ALBUM, JSON.stringify([...owned, ...gained]));
+  return gained;
+}
+
+export function clearAlbum(): boolean {
+  return remove(SAVE_KEY_ALBUM);
 }
 
 // ---------------------------------------------------------------------------

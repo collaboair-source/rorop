@@ -1,38 +1,401 @@
-/* 「별이 되어줘」 게임 전용 스타일. 전역 globals.css 는 건드리지 않는다. */
+/*
+ * 「별이 되어줘」 v2 — 백스테이지 / 온스테이지.
+ * 04_UI_REDESIGN.md 1.2~1.4 의 토큰·폰트 변수·.stage·유틸.
+ * 전역 globals.css 는 건드리지 않는다. 컴포넌트는 여기 선언된 토큰만 참조한다.
+ */
+
+/* ---------------------------------------------------------------------------
+ * 1.2 색 토큰 — 백스테이지(기본)
+ * ------------------------------------------------------------------------- */
 
 .idol-root {
-  font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Pretendard",
-    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --bg: #fbf8fc; /* 라일락 기운 웜 화이트 */
+  --surface: #ffffff;
+  --surface-2: #f3eef6; /* 라일락 그레이, 비활성·구분 */
+  --ink: #1e1a2e;
+  --ink-2: #5b5670; /* 보조 텍스트 */
+  /* 캡션·비활성. 문서값 #9A94B0 은 --bg 대비 2.8:1 이라 5절의 4.5:1 기준을 못 넘어서 한 단계 어둡게 잡았다 */
+  --ink-3: #726c85;
+  --line: #e7e0ee;
+  --accent: #ff6b8a; /* 하람 공식색 */
+  --accent-ink: #d6335a; /* 밝은 바탕 위 텍스트용 코랄 */
+  --accent-soft: #ffe3e9;
+  --good: #1fa97a; /* 상승 (의미색) */
+  --bad: #e5484d; /* 하락·위험 */
+  --warn: #e8961e;
+  --gold: #d9a93a; /* 수상·1위 (의미색) */
+  --silver: #c9ccd6; /* 신인 프레임 */
+  --on-accent: #ffffff; /* 코랄 채움 위 글자 */
+  --on-media: #ffffff; /* 이미지·홀로·스크림 위 글자 (두 세계 공통) */
+  --shadow: 0 10px 30px rgba(60, 30, 80, 0.1);
+  --scrim: rgba(30, 26, 46, 0.55);
+
+  /* 홀로그램 (포토카드 희귀 프레임·잠긴 카드 뒷면) */
+  --holo: conic-gradient(from 200deg, #ff9bb3, #c9a7ff, #9ef0e1, #ffe58a, #ff9bb3);
+
+  /* 실루엣 폴백 (단계별 색) */
+  --sil-body: #c6bad6;
+  --sil-hair: #a698c0;
+  --sil-glow: rgba(255, 107, 138, 0.24);
+
+  color-scheme: light;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-.idol-root ::selection {
-  background: #a78bfa;
-  color: #0b1020;
+.idol-root .sil-rookie {
+  --sil-body: #a99bc6;
+  --sil-hair: #8a79ae;
+  --sil-glow: rgba(255, 107, 138, 0.3);
 }
 
-/* 별 그라데이션 (타이틀 키비주얼 폴백) */
-.idol-starfield {
-  background-color: #0b1020;
-  background-image:
-    radial-gradient(1.5px 1.5px at 12% 22%, rgba(238, 240, 255, 0.9), transparent 60%),
-    radial-gradient(1.5px 1.5px at 78% 14%, rgba(238, 240, 255, 0.8), transparent 60%),
-    radial-gradient(1px 1px at 34% 64%, rgba(238, 240, 255, 0.7), transparent 60%),
-    radial-gradient(1.5px 1.5px at 62% 76%, rgba(238, 240, 255, 0.75), transparent 60%),
-    radial-gradient(1px 1px at 88% 52%, rgba(238, 240, 255, 0.6), transparent 60%),
-    radial-gradient(1px 1px at 20% 84%, rgba(238, 240, 255, 0.55), transparent 60%),
-    radial-gradient(1.5px 1.5px at 50% 34%, rgba(238, 240, 255, 0.65), transparent 60%),
-    radial-gradient(120% 90% at 20% 0%, rgba(167, 139, 250, 0.35), transparent 62%),
-    radial-gradient(110% 80% at 90% 30%, rgba(94, 234, 212, 0.22), transparent 60%),
-    linear-gradient(180deg, #1a2145 0%, #0b1020 100%);
+.idol-root .sil-star {
+  --sil-body: #ffa9bd;
+  --sil-hair: #f27f9b;
+  --sil-glow: rgba(255, 107, 138, 0.42);
 }
+
+/* ---------------------------------------------------------------------------
+ * 온스테이지 — 무대 화면 루트에 .stage 를 붙여 토큰을 덮어쓴다
+ * (.idol-root 와 같은 특이도이므로 반드시 뒤에 온다)
+ * ------------------------------------------------------------------------- */
+
+.stage {
+  --bg: #0f0c24;
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.1);
+  --ink: #f6f2ff;
+  --ink-2: #b9b2d6;
+  /* 문서값 #6F6890 은 --bg 대비 3.7:1 이라 한 단계 밝게 잡았다 (5절 4.5:1) */
+  --ink-3: #8a83ad;
+  --line: rgba(255, 255, 255, 0.12);
+  --accent-ink: #ff8fa6;
+  --accent-soft: rgba(255, 107, 138, 0.18);
+  --gold: #f5c451;
+  --shadow: 0 0 40px rgba(255, 107, 138, 0.25);
+  --scrim: rgba(6, 4, 16, 0.62);
+  --sil-body: #6a5f8d;
+  --sil-hair: #514775;
+  --sil-glow: rgba(255, 107, 138, 0.45);
+
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.stage .sil-rookie {
+  --sil-body: #7d6fa6;
+  --sil-hair: #5f5488;
+}
+
+.stage .sil-star {
+  --sil-body: #d98ba4;
+  --sil-hair: #b0687f;
+}
+
+.idol-root ::selection {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.idol-root :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------------------
+ * 1.3 타이포그래피
+ * ------------------------------------------------------------------------- */
+
+.display {
+  font-family: var(--font-display), var(--font-body), "Apple SD Gothic Neo",
+    "Malgun Gothic", sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 이미지·코랄 위의 글자 (리터럴 색 대신 토큰을 쓰기 위한 유틸) */
+.on-media {
+  color: var(--on-media);
+}
+
+.on-media-2 {
+  color: var(--on-media);
+  opacity: 0.8;
+}
+
+.on-accent {
+  color: var(--on-accent);
+}
+
+/* ---------------------------------------------------------------------------
+ * 1.4 형태 언어 — 유리, 홀로, 포토카드 프레임
+ * ------------------------------------------------------------------------- */
+
+.glass {
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.holo {
+  background: var(--holo);
+  background-size: 220% 220%;
+}
+
+.holo-dim {
+  background: var(--holo);
+  background-size: 220% 220%;
+  opacity: 0.55;
+}
+
+.pc {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid var(--line);
+  background: var(--surface-2);
+}
+
+.pc-basic {
+  border-color: var(--line);
+}
+
+.pc-silver {
+  border-color: var(--silver);
+}
+
+.pc-gold {
+  border-color: var(--gold);
+}
+
+.pc-holo {
+  border-color: transparent;
+  background-image: var(--holo);
+  background-origin: border-box;
+  box-shadow: inset 0 0 0 2px var(--surface);
+}
+
+/* 카드 뷰어 배경 — 바탕색을 거의 불투명하게 덮어 본문 대비를 지킨다 */
+.viewer-veil {
+  background: var(--bg);
+  opacity: 0.95;
+}
+
+/* 잠긴 카드 뒷면 — 홀로 위에 옅은 베일 (흰 글자 대비 확보) */
+.pc-back {
+  background: var(--holo);
+  background-size: 220% 220%;
+  animation: idolHolo 7s linear infinite;
+}
+
+.pc-back-veil {
+  background: linear-gradient(180deg, rgba(22, 14, 34, 0.3) 0%, rgba(22, 14, 34, 0.58) 100%);
+}
+
+/* 활동 아이콘 — 이모지를 분류별 연한 배경의 원 안에 넣어 통일한다 (1.4) */
+.actico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  line-height: 1;
+}
+
+.actico-training {
+  background: rgba(255, 107, 138, 0.14);
+}
+
+.actico-work {
+  background: rgba(232, 150, 30, 0.16);
+}
+
+.actico-promo {
+  background: rgba(201, 167, 255, 0.22);
+}
+
+.actico-rest {
+  background: rgba(31, 169, 122, 0.14);
+}
+
+/* ---------------------------------------------------------------------------
+ * 2.3 배경 폴백 — 장면별 모티프 (CSS 만으로)
+ * ------------------------------------------------------------------------- */
+
+.scene {
+  position: absolute;
+  inset: 0;
+}
+
+/* 연습실 — 거울 격자선 */
+.scene-mirror {
+  background-color: #efe6f2;
+  background-image:
+    linear-gradient(180deg, rgba(255, 107, 138, 0.14), transparent 46%),
+    repeating-linear-gradient(90deg, rgba(94, 74, 120, 0.16) 0 1px, transparent 1px 68px),
+    repeating-linear-gradient(0deg, rgba(94, 74, 120, 0.12) 0 1px, transparent 1px 84px),
+    linear-gradient(160deg, #f7f0f8 0%, #dfd4e6 100%);
+}
+
+/* 무대 — 조명 빔 */
+.scene-beam {
+  background-color: #120e2c;
+  background-image:
+    radial-gradient(80% 55% at 50% 108%, rgba(255, 107, 138, 0.38), transparent 70%),
+    conic-gradient(from 196deg at 22% -12%, transparent 0deg, rgba(255, 143, 166, 0.3) 6deg, transparent 13deg),
+    conic-gradient(from 172deg at 52% -14%, transparent 0deg, rgba(201, 167, 255, 0.26) 7deg, transparent 15deg),
+    conic-gradient(from 150deg at 80% -12%, transparent 0deg, rgba(158, 240, 225, 0.2) 6deg, transparent 13deg),
+    linear-gradient(180deg, #1b1440 0%, #0b0820 100%);
+}
+
+/* 숙소 — 창문 사각형과 따뜻한 빛 */
+.scene-window {
+  background-color: #2a2038;
+  background-image:
+    radial-gradient(46% 38% at 74% 26%, rgba(255, 214, 150, 0.5), transparent 72%),
+    linear-gradient(
+      100deg,
+      transparent 58%,
+      rgba(255, 226, 175, 0.24) 58.5%,
+      rgba(255, 226, 175, 0.24) 78%,
+      transparent 78.5%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 34%,
+      rgba(255, 226, 175, 0.2) 34.5%,
+      rgba(255, 226, 175, 0.2) 36%,
+      transparent 36.5%
+    ),
+    linear-gradient(165deg, #3a2c4c 0%, #1d1630 100%);
+}
+
+/* 사무실·카페·병원 — 따뜻한 2색 */
+.scene-warm {
+  background-image:
+    radial-gradient(90% 70% at 18% 0%, rgba(255, 197, 168, 0.42), transparent 66%),
+    linear-gradient(160deg, #f6ece9 0%, #e2d6e4 100%);
+}
+
+/* 스튜디오·공항 — 차가운 2색 */
+.scene-cool {
+  background-image:
+    radial-gradient(90% 70% at 82% 4%, rgba(158, 240, 225, 0.34), transparent 62%),
+    linear-gradient(160deg, #e9e6f6 0%, #d5cee8 100%);
+}
+
+/* 기본 2색 */
+.scene-default {
+  background-image:
+    radial-gradient(96% 74% at 20% 0%, rgba(255, 107, 138, 0.2), transparent 64%),
+    linear-gradient(160deg, #f4edf8 0%, #ddd3e8 100%);
+}
+
+.stage .scene-mirror,
+.stage .scene-warm,
+.stage .scene-cool,
+.stage .scene-default {
+  filter: brightness(0.42) saturate(0.9);
+}
+
+/* 장면 위에 얹는 스크림 (텍스트 대비 확보) */
+.scene-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 34%, var(--bg) 100%);
+}
+
+/* 앨범 재킷 — 콘셉트별 그라데이션 (3.8 컴백 선택) */
+.jacket-fresh {
+  background: linear-gradient(160deg, #8fe3ff 0%, #d9f3ff 48%, #ffe9f0 100%);
+}
+
+.jacket-sexy {
+  background: linear-gradient(160deg, #3a1030 0%, #7b1f45 55%, #ff6b8a 100%);
+}
+
+.jacket-hiphop {
+  background: linear-gradient(160deg, #1c1c22 0%, #3f3a52 52%, #e8961e 100%);
+}
+
+.jacket-ballad {
+  background: linear-gradient(160deg, #2a3566 0%, #6f7bb5 56%, #e9e3f6 100%);
+}
+
+.jacket-performance {
+  background: linear-gradient(160deg, #2b1046 0%, #7a3bb0 52%, #ff9bb3 100%);
+}
+
+/* 트로피 카드 */
+.trophy-card {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(255, 255, 255, 0.16), transparent 62%),
+    var(--surface-2);
+}
+
+/* 온스테이지 조명 빔 (StageBackdrop) */
+.beam {
+  position: absolute;
+  top: -10%;
+  width: 40%;
+  height: 120%;
+  transform-origin: top center;
+  filter: blur(6px);
+  pointer-events: none;
+  /* 가장자리를 좌우로 흐리게 잘라 사각형이 아니라 빛줄기로 읽히게 한다 */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 58%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 58%, transparent 100%);
+}
+
+.beam-a {
+  left: -8%;
+  transform: rotate(15deg);
+  background: linear-gradient(to bottom, rgba(255, 143, 166, 0.45), rgba(255, 143, 166, 0) 74%);
+}
+
+.beam-b {
+  left: 30%;
+  transform: rotate(-3deg);
+  background: linear-gradient(to bottom, rgba(201, 167, 255, 0.32), rgba(201, 167, 255, 0) 70%);
+}
+
+.beam-c {
+  right: -10%;
+  transform: rotate(-17deg);
+  background: linear-gradient(to bottom, rgba(158, 240, 225, 0.28), rgba(158, 240, 225, 0) 68%);
+}
+
+.stage-floor {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 46%;
+  pointer-events: none;
+  background: radial-gradient(70% 100% at 50% 100%, rgba(255, 107, 138, 0.34), transparent 72%);
+}
+
+/* ---------------------------------------------------------------------------
+ * 1.5 모션
+ * ------------------------------------------------------------------------- */
 
 @keyframes idolFadeUp {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -51,7 +414,45 @@
 
 @keyframes idolSheetUp {
   from {
-    transform: translateY(14px);
+    transform: translateY(18px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes idolToastUp {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+
+@keyframes idolBeam {
+  from {
+    opacity: 0;
+    transform: scaleY(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes idolFlip {
+  from {
+    transform: perspective(700px) rotateX(-72deg);
     opacity: 0;
   }
   to {
@@ -63,10 +464,19 @@
 @keyframes idolPulse {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.5;
   }
   50% {
     opacity: 1;
+  }
+}
+
+@keyframes idolHolo {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
   }
 }
 
@@ -82,23 +492,60 @@
   animation: idolSheetUp 200ms ease-out both;
 }
 
+.idol-toast {
+  animation: idolToastUp 2400ms ease-out both;
+}
+
+.idol-beam-in {
+  animation: idolBeam 800ms ease-out both;
+  transform-origin: top center;
+}
+
+.idol-flip {
+  animation: idolFlip 420ms ease-out both;
+  transform-origin: top center;
+}
+
 .idol-pulse {
   animation: idolPulse 1.2s ease-in-out infinite;
 }
 
+.holo,
+.holo-dim {
+  animation: idolHolo 7s linear infinite;
+}
+
 .idol-no-scrollbar {
   scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .idol-no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
+/* 가로 스크롤러 (출신 카드 등) — 문서 폭을 넓히지 않는다 */
+.idol-hscroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.idol-hscroll > * {
+  scroll-snap-align: center;
+  flex: 0 0 auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .idol-fade-up,
-  .idol-fade-in,
-  .idol-sheet-up,
-  .idol-pulse {
-    animation: none;
+  .idol-root *,
+  .idol-root *::before,
+  .idol-root *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

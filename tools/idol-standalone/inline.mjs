@@ -24,7 +24,13 @@ const css = await readFile(dist + cssName, "utf8");
 const safeJs = js.replaceAll("</script", "<\\/script");
 
 const title = "별이 되어줘";
+// 폰트는 CDN 링크로 받는다 (막혀 있어도 idol.css 의 폴백 스택으로 읽힌다)
+const fontLink = `<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gothic+A1:wght@400;500;700;800&display=swap" />`;
+
 const body = `<title>${title}</title>
+${fontLink}
 <style>
 ${css}
 </style>
@@ -43,7 +49,7 @@ await writeFile(
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="theme-color" content="#0B1020" />
+<meta name="theme-color" content="#FBF8FC" />
 </head>
 <body style="margin:0">
 ${body}</body>

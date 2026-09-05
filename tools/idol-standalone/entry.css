@@ -4,11 +4,21 @@
 @source "../../src/app/idol";
 @source "../../src/components/idol";
 
-/* 단일 HTML 로 배포될 때 뒤 배경까지 어둡게 (Next 앱에서는 루트 layout 이 담당) */
+/*
+ * 폰트 변수 — Next 앱은 next/font 가 만들지만 단일 HTML 은 여기서 선언한다.
+ * 실제 폰트 파일은 index.html / inline.mjs 가 넣는 Google Fonts <link> 가 받는다.
+ * 링크가 막혀 있어도 폴백 스택으로 그대로 읽힌다.
+ */
+:root {
+  --font-body: "Gothic A1";
+  --font-display: "Black Han Sans";
+}
+
+/* 단일 HTML 로 배포될 때 뒤 배경까지 바탕색으로 (Next 앱에서는 루트 layout 이 담당) */
 html,
 body {
   margin: 0;
-  background: #0b1020;
-  color: #eef0ff;
-  color-scheme: dark;
+  background: #fbf8fc;
+  color: #1e1a2e;
+  color-scheme: light;
 }

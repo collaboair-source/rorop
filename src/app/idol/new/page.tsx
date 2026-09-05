@@ -1,10 +1,11 @@
 "use client";
 
-/** 캐릭터 생성 — 이름 · 출신 5택 · 성격 4택 + 초기 스탯 미리보기 */
+/** 캐릭터 생성 (백스테이지, 04 문서 3.2) — "연습생 계약서". 이름 → 출신 5택 → 성격 4택. */
 
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createGame, formatFans } from "@/game/idol/engine";
+import { portraitSrc } from "@/game/idol/assets";
 import { BACKGROUNDS } from "@/game/idol/data/backgrounds";
 import { PERSONALITIES } from "@/game/idol/data/personalities";
 import { saveAuto } from "@/game/idol/save";
@@ -16,27 +17,27 @@ import {
   type BackgroundId,
   type PersonalityDef,
   type PersonalityId,
-  type SkillId,
 } from "@/game/idol/types";
-import { Portrait } from "@/components/idol/Portrait";
-import { StatPanel } from "@/components/idol/StatPanel";
-import { Button, Card, SectionTitle } from "@/components/idol/ui";
+import { PortraitCard } from "@/components/idol/Photocard";
+import { RadarChart } from "@/components/idol/RadarChart";
+import { Button, Card, Chip, Icon } from "@/components/idol/ui";
 
 const NAME_MAX = 8;
 const DEFAULT_NAME = "하람";
 
-function talentText(def: BackgroundDef): string {
-  const parts = SKILL_IDS.filter((id) => def.talents[id] !== 1).map(
-    (id) => `${SKILL_LABELS[id]} ×${def.talents[id]}`,
+function talentBadge(def: BackgroundDef): string {
+  const best = SKILL_IDS.filter((id) => def.talents[id] !== 1).sort(
+    (a, b) => def.talents[b] - def.talents[a],
   );
-  return parts.length > 0 ? parts.join(" · ") : "재능 보정 없음";
+  if (best.length === 0) return "재능 보정 없음";
+  return `${SKILL_LABELS[best[0]]} 재능 ×${def.talents[best[0]]}`;
 }
 
-function bestConcepts(def: BackgroundDef): string {
+function bestConcept(def: BackgroundDef): string {
   const sorted = (Object.keys(def.conceptAffinity) as Array<keyof typeof def.conceptAffinity>)
     .slice()
     .sort((a, b) => def.conceptAffinity[b] - def.conceptAffinity[a]);
-  return `${CONCEPT_LABELS[sorted[0]]} 계열에 강한 편`;
+  return `${CONCEPT_LABELS[sorted[0]]} 계열에 강하다`;
 }
 
 function mulText(label: string, mul: number, invert = false): string | null {
@@ -46,168 +47,209 @@ function mulText(label: string, mul: number, invert = false): string | null {
   return `${label} ${up ? "+" : "−"}${pct}%`;
 }
 
-function personalityText(def: PersonalityDef): string[] {
+function personalityEffects(def: PersonalityDef): string {
   const out: string[] = [];
-  const training = mulText("훈련 효과", def.trainingMul);
-  const stress = mulText("스트레스 증가", def.stressMul);
-  const rest = mulText("휴식 회복", def.restMul);
-  const fans = mulText("팬 증가", def.fansMul);
-  const bond = mulText("호감도 증가", def.bondMul);
-  const scandal = mulText("스캔들 확률", def.scandalMul);
-  for (const t of [training, stress, rest, fans, bond, scandal]) if (t) out.push(t);
+  for (const t of [
+    mulText("훈련 효과", def.trainingMul),
+    mulText("스트레스 증가", def.stressMul),
+    mulText("휴식 회복", def.restMul),
+    mulText("팬 증가", def.fansMul),
+    mulText("호감도 증가", def.bondMul),
+    mulText("스캔들 확률", def.scandalMul),
+  ]) {
+    if (t) out.push(t);
+  }
   for (const [concept, bonus] of Object.entries(def.conceptBonus)) {
     if (typeof bonus !== "number") continue;
     out.push(`${CONCEPT_LABELS[concept as keyof typeof CONCEPT_LABELS]} 적성 +${bonus}`);
   }
-  return out;
-}
-
-function SkillPreviewRow({ def }: { def: BackgroundDef }) {
-  return (
-    <div className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5">
-      {SKILL_IDS.map((id: SkillId) => (
-        <span key={id} className="text-[11px] text-[#C7CCEB]">
-          {SKILL_LABELS[id]}{" "}
-          <span className="font-bold tabular-nums text-[#EEF0FF]">{def.skills[id]}</span>
-        </span>
-      ))}
-    </div>
-  );
+  return out.join(" · ");
 }
 
 export default function IdolNewGamePage() {
   const router = useRouter();
   const [name, setName] = useState(DEFAULT_NAME);
-  const [background, setBackground] = useState<BackgroundId>("street_cast");
-  const [personality, setPersonality] = useState<PersonalityId>("diligent");
+  const [background, setBackground] = useState<BackgroundId | null>(null);
+  const [personality, setPersonality] = useState<PersonalityId | null>(null);
 
   const trimmed = name.trim();
   const nameValid = trimmed.length >= 1 && trimmed.length <= NAME_MAX;
+  const ready = nameValid && background !== null && personality !== null;
 
   const preview = useMemo(
     () =>
       createGame({
         name: nameValid ? trimmed : DEFAULT_NAME,
-        background,
-        personality,
+        background: background ?? "street_cast",
+        personality: personality ?? "diligent",
         seed: 1,
       }),
     [background, personality, nameValid, trimmed],
   );
 
   const start = useCallback(() => {
-    if (!nameValid) return;
+    if (!nameValid || !background || !personality) return;
     const state = createGame({ name: trimmed, background, personality });
     saveAuto(state);
     router.push("/idol/play");
   }, [background, nameValid, personality, router, trimmed]);
 
+  const personalityDef = personality ? PERSONALITIES.find((p) => p.id === personality) : null;
+
   return (
-    <main className="flex flex-1 flex-col gap-3 px-3 pb-28 pt-4">
+    <main className="flex flex-1 flex-col gap-4 px-4 pb-[132px] pt-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-[19px] font-black">연습생 등록</h1>
-        <Button small variant="ghost" onClick={() => router.push("/idol")}>
-          타이틀로
-        </Button>
+        <button
+          type="button"
+          onClick={() => router.push("/idol")}
+          aria-label="타이틀로"
+          className="-ml-2 flex h-11 w-11 items-center justify-center rounded-full text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
+        >
+          <Icon name="back" size={20} />
+        </button>
+        <p className="text-[12px] font-bold tracking-[0.14em] text-[var(--ink-3)]">연습생 등록</p>
+        <span className="h-11 w-11" aria-hidden="true" />
       </div>
 
+      {/* 1. 계약서 */}
       <Card>
-        <SectionTitle right={`${trimmed.length}/${NAME_MAX}`}>이름</SectionTitle>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
-          maxLength={NAME_MAX}
-          placeholder={DEFAULT_NAME}
-          aria-label="아이돌 이름"
-          data-testid="name-input"
-          className="min-h-[44px] w-full rounded-xl border border-[#2C3766] bg-[#0E1533] px-3 text-[15px] text-[#EEF0FF] outline-none placeholder:text-[#4E5680] focus:border-[#A78BFA]"
-        />
-        {!nameValid ? (
-          <p className="mt-1 text-[11px] text-[#F87171]">이름은 1~{NAME_MAX}자로 정해 주세요.</p>
-        ) : (
-          <p className="mt-1 text-[11px] text-[#98A2CC]">성을 빼고 부르는 이름으로 지어도 좋다.</p>
-        )}
-      </Card>
+        <p className="text-[12px] font-bold tracking-[0.1em] text-[var(--accent-ink)]">
+          루미너스 엔터테인먼트
+        </p>
+        <h1 className="mt-0.5 text-[20px] font-extrabold text-[var(--ink)]">연습생 계약서</h1>
+        <p className="mt-2 text-[12px] leading-5 text-[var(--ink-2)]">
+          아래 서명란에 이름을 적는다. 앞으로 3년, 이 이름을 부르며 살게 된다.
+        </p>
 
-      <div>
-        <SectionTitle>출신</SectionTitle>
-        <ul className="space-y-2">
-          {BACKGROUNDS.map((def) => (
-            <li key={def.id}>
-              <button
-                type="button"
-                onClick={() => setBackground(def.id)}
-                data-testid={`bg-${def.id}`}
-                className={[
-                  "w-full rounded-xl border px-3 py-2.5 text-left transition-colors",
-                  background === def.id
-                    ? "border-[#A78BFA] bg-[#1F1B3D]"
-                    : "border-[#2C3766] bg-[#141B33] hover:bg-[#1B2444]",
-                ].join(" ")}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[14px] font-bold">{def.label}</span>
-                  <span className="text-[11px] text-[#5EEAD4]">{talentText(def)}</span>
-                </div>
-                <p className="mt-1 text-[11.5px] leading-5 text-[#98A2CC]">{def.description}</p>
-                <SkillPreviewRow def={def} />
-                <p className="mt-1.5 text-[11px] text-[#C7CCEB]">
-                  시작 팬 {formatFans(def.startFans)} · 자금 {def.startMoney}만 · 최대 체력{" "}
-                  {def.maxStamina} · 스트레스 {def.startStress} · 평판 {def.startReputation} ·{" "}
-                  {bestConcepts(def)}
-                </p>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <SectionTitle>성격</SectionTitle>
-        <ul className="grid grid-cols-2 gap-2">
-          {PERSONALITIES.map((def) => (
-            <li key={def.id}>
-              <button
-                type="button"
-                onClick={() => setPersonality(def.id)}
-                data-testid={`pers-${def.id}`}
-                className={[
-                  "h-full w-full rounded-xl border px-3 py-2.5 text-left transition-colors",
-                  personality === def.id
-                    ? "border-[#5EEAD4] bg-[#0F2B2A]"
-                    : "border-[#2C3766] bg-[#141B33] hover:bg-[#1B2444]",
-                ].join(" ")}
-              >
-                <span className="text-[13.5px] font-bold">{def.label}</span>
-                <p className="mt-1 text-[11px] leading-5 text-[#98A2CC]">{def.description}</p>
-                <ul className="mt-1.5 space-y-0.5">
-                  {personalityText(def).map((t) => (
-                    <li key={t} className="text-[10.5px] leading-4 text-[#C7CCEB]">
-                      · {t}
-                    </li>
-                  ))}
-                </ul>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <Card>
-        <SectionTitle>초기 스탯 미리보기</SectionTitle>
-        <div className="flex gap-3">
-          <Portrait stage="trainee" emotion="neutral" name={preview.idol.name} size="md" />
-          <StatPanel idol={preview.idol} />
-        </div>
-        <p className="mt-2 text-[11.5px] text-[#98A2CC]">
-          자금 {preview.economy.money}만 · 팬 {formatFans(preview.idol.social.fans)} · 트레이너 1등급
+        <label className="mt-4 block">
+          <span className="text-[11px] font-bold tracking-[0.14em] text-[var(--ink-3)]">서명</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
+            maxLength={NAME_MAX}
+            placeholder={DEFAULT_NAME}
+            aria-label="아이돌 이름"
+            data-testid="name-input"
+            className="mt-1 min-h-[52px] w-full border-b-2 border-[var(--line)] bg-transparent pb-1 text-[24px] font-extrabold text-[var(--ink)] outline-none placeholder:text-[var(--ink-3)] focus:border-[var(--accent)]"
+          />
+        </label>
+        <p className={`mt-1 text-[11px] ${nameValid ? "text-[var(--ink-3)]" : "text-[var(--bad)]"}`}>
+          {nameValid ? `${trimmed.length}/${NAME_MAX}자` : `이름은 1~${NAME_MAX}자로 정해 주세요.`}
         </p>
       </Card>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[480px] border-t border-[#242E52] bg-[#0B1020]/95 px-3 py-3 backdrop-blur">
-        <Button full variant="primary" disabled={!nameValid} onClick={start} testId="start-game">
-          시작
-        </Button>
+      {/* 2. 출신 */}
+      {nameValid ? (
+        <section className="idol-fade-up">
+          <h2 className="mb-2 text-[15px] font-extrabold text-[var(--ink)]">
+            어디에서 왔나
+            <span className="ml-1.5 text-[12px] font-bold text-[var(--ink-3)]">출신 5택</span>
+          </h2>
+          <ul className="idol-hscroll idol-no-scrollbar -mx-4 px-4 pb-1">
+            {BACKGROUNDS.map((def) => {
+              const on = background === def.id;
+              return (
+                <li key={def.id} className="w-[220px]">
+                  <button
+                    type="button"
+                    onClick={() => setBackground(def.id)}
+                    data-testid={`bg-${def.id}`}
+                    className={[
+                      "flex h-full w-full flex-col rounded-[20px] border-2 p-3 text-left transition-colors duration-[120ms]",
+                      on
+                        ? "border-[var(--accent)] bg-[var(--accent-soft)]"
+                        : "border-[var(--line)] bg-[var(--surface)]",
+                    ].join(" ")}
+                  >
+                    <span className="text-[16px] font-extrabold text-[var(--ink)]">{def.label}</span>
+                    <span className="mt-1 block text-[12px] leading-5 text-[var(--ink-2)]">
+                      {def.description}
+                    </span>
+                    <span className="mt-2 flex items-center gap-2">
+                      <RadarChart
+                        values={SKILL_IDS.map((id) => def.skills[id])}
+                        size={80}
+                        showLabels={false}
+                      />
+                      <span className="num flex-1 text-[11px] leading-5 text-[var(--ink-2)]">
+                        팬 {formatFans(def.startFans)}
+                        <br />
+                        자금 {def.startMoney}만
+                        <br />
+                        최대 체력 {def.maxStamina}
+                      </span>
+                    </span>
+                    <span className="mt-2 flex flex-wrap gap-1">
+                      <Chip tone="accent">{talentBadge(def)}</Chip>
+                      <Chip>{bestConcept(def)}</Chip>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* 3. 성격 */}
+      {background ? (
+        <section className="idol-fade-up">
+          <h2 className="mb-2 text-[15px] font-extrabold text-[var(--ink)]">
+            어떤 사람인가
+            <span className="ml-1.5 text-[12px] font-bold text-[var(--ink-3)]">성격 4택</span>
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {PERSONALITIES.map((def) => {
+              const on = personality === def.id;
+              return (
+                <button
+                  key={def.id}
+                  type="button"
+                  onClick={() => setPersonality(def.id)}
+                  data-testid={`pers-${def.id}`}
+                  className={[
+                    "min-h-[44px] rounded-full border-2 px-4 text-[14px] font-bold transition-colors duration-[120ms]",
+                    on
+                      ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-ink)]"
+                      : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]",
+                  ].join(" ")}
+                >
+                  {def.label}
+                </button>
+              );
+            })}
+          </div>
+          {personalityDef ? (
+            <p className="mt-2 text-[12px] leading-6 text-[var(--ink-2)]">
+              {personalityDef.description}
+              <br />
+              <span className="text-[var(--accent-ink)]">{personalityEffects(personalityDef)}</span>
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* 하단 고정 — 미리보기 포토카드 + 계약 체결 */}
+      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[480px] border-t border-[var(--line)] bg-[var(--surface)] px-4 py-3">
+        <div className="flex items-center gap-3">
+          <PortraitCard
+            stage="trainee"
+            emotion="neutral"
+            src={portraitSrc("trainee", "neutral")}
+            size="sm"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[16px] font-extrabold text-[var(--ink)]">
+              {nameValid ? trimmed : DEFAULT_NAME}
+            </p>
+            <p className="num truncate text-[12px] text-[var(--ink-2)]">
+              자금 {preview.economy.money}만 · 팬 {formatFans(preview.idol.social.fans)}
+            </p>
+          </div>
+          <Button variant="primary" disabled={!ready} onClick={start} testId="start-game">
+            계약 체결
+          </Button>
+        </div>
       </div>
     </main>
   );
