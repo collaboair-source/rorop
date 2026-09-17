@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BarkLens 바크렌즈</title>
+<meta name="description" content="강아지 소리의 패턴을 보이게 만들고, 논문 근거로 상황을 읽어주는 샘플 앱">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" stroke-width="2.5"/>
+        <path d="M9 24 L13 16 L17 26 L21 12 L25 28 L29 18 L32 22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>BarkLens</h1>
+        <p class="tagline">강아지 소리를 보이게, 읽히게</p>
+      </div>
+    </div>
+    <button id="dogChip" class="chip" type="button" title="강아지 프로필로 이동">🐶 <span id="dogChipText">우리 강아지 · 중형</span></button>
+  </header>
+
+  <main>
+    <!-- ───────── 듣기 ───────── -->
+    <section id="tab-listen" class="tab" aria-labelledby="h-listen">
+      <h2 id="h-listen" class="sr-only">듣기</h2>
+      <div class="scope">
+        <div class="scope-axis" aria-hidden="true"><span>8k</span><span>4k</span><span>2k</span><span>1k</span><span>500</span><span>250</span><span>Hz</span></div>
+        <canvas id="spec" width="720" height="220" aria-label="스펙트로그램: 시간에 따른 주파수 에너지"></canvas>
+        <canvas id="wave" width="720" height="56" aria-label="최근 6초 소리 크기"></canvas>
+        <div class="scope-hud">
+          <span id="hudMode">대기 중</span>
+          <span id="hudLevel" class="mono">— dB</span>
+          <span id="hudFloor" class="mono">바닥 — dB</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="btnListen" class="btn primary" type="button">🎙 듣기 시작</button>
+        <label class="btn" for="fileInput">📂 녹음 파일 분석<input id="fileInput" type="file" accept="audio/*,video/*"></label>
+        <div class="demo-row" role="group" aria-label="데모 소리">
+          <span class="demo-label">데모</span>
+          <button class="btn small demo" type="button" data-demo="alarm">초인종 경계</button>
+          <button class="btn small demo" type="button" data-demo="play">공놀이</button>
+          <button class="btn small demo" type="button" data-demo="isolation">혼자 남음</button>
+          <button class="btn small demo" type="button" data-demo="whine">낑낑</button>
+          <button class="btn small demo" type="button" data-demo="growl">으르렁</button>
+        </div>
+      </div>
+      <p id="status" class="status" role="status">마이크를 켜면 짖음을 자동으로 잡아 3축 지문(음높이·음색·리듬)으로 보여줍니다. 데모 버튼으로 먼저 확인해 보세요.</p>
+
+      <article id="reading" class="reading" aria-live="polite">
+        <div class="reading-head">
+          <div>
+            <span id="rCall" class="pill">짖음</span>
+            <span id="rTime" class="muted mono">—</span>
+          </div>
+          <div class="conf"><span class="muted">확신</span> <span id="rConf" class="mono">—</span>
+            <span class="conf-bar" aria-hidden="true"><i id="rConfBar"></i></span></div>
+        </div>
+        <h3 id="rTop" class="reading-top">아직 잡힌 소리가 없습니다</h3>
+        <p id="rTopSub" class="muted">데모를 누르거나 듣기를 시작하세요.</p>
+
+        <div class="fingerprint">
+          <svg id="radar" viewBox="0 0 160 150" class="radar" role="img" aria-label="3축 지문 (음높이·음색·리듬)"></svg>
+          <div class="axes">
+            <div class="axis"><span class="axis-name">음높이</span><span class="track"><span class="lo">낮음</span><i id="axPitch" style="left:50%"></i><span class="hi">높음</span></span><span id="axPitchV" class="mono axis-val">—</span></div>
+            <div class="axis"><span class="axis-name">음색</span><span class="track"><span class="lo">거침</span><i id="axTone" style="left:50%"></i><span class="hi">맑음</span></span><span id="axToneV" class="mono axis-val">—</span></div>
+            <div class="axis"><span class="axis-name">리듬</span><span class="track"><span class="lo">느림</span><i id="axTempo" style="left:20%"></i><span class="hi">빠름</span></span><span id="axTempoV" class="mono axis-val">—</span></div>
+          </div>
+        </div>
+
+        <div id="ctxBars" class="ctx-bars" aria-label="상황별 가능성"></div>
+
+        <details class="reasons" open>
+          <summary>왜 이렇게 읽었나</summary>
+          <ul id="rReasons"></ul>
+        </details>
+        <div id="rAdvice" class="advice" hidden></div>
+
+        <div class="tagrow" id="tagRow" hidden>
+          <span class="muted">실제 상황은?</span>
+          <div class="tag-btns" role="group" aria-label="실제 상황 태그">
+            <button class="btn small" type="button" data-tag="isolation">외로움</button>
+            <button class="btn small" type="button" data-tag="alarm">경계</button>
+            <button class="btn small" type="button" data-tag="play">놀이</button>
+            <button class="btn small" type="button" data-tag="demand">요구</button>
+            <button class="btn small" type="button" data-tag="fear">두려움</button>
+            <button class="btn small" type="button" data-tag="other">기타</button>
+          </div>
+        </div>
+      </article>
+
+      <section class="session">
+        <div class="section-head"><h2>이번 세션</h2><span id="sessionMeta" class="muted mono">0회</span></div>
+        <div class="timeline-wrap"><canvas id="timeline" width="720" height="44" aria-label="최근 60초 짖음 타임라인"></canvas><div class="timeline-scale"><span>-60s</span><span>-30s</span><span>지금</span></div></div>
+        <div id="sessionCounts" class="counts"></div>
+        <ol id="eventList" class="event-list" reversed></ol>
+      </section>
+    </section>
+
+    <!-- ───────── 몸짓 ───────── -->
+    <section id="tab-body" class="tab" hidden aria-labelledby="h-body">
+      <div class="section-head"><h2 id="h-body">몸짓 읽기</h2><button id="cueClear" class="btn small" type="button">모두 해제</button></div>
+      <p class="muted">지금 보이는 단서를 모두 고르면 정서가(긍정↔부정)와 각성(차분↔흥분)으로 요약합니다. 소리와 함께 보면 정확도가 올라갑니다.</p>
+      <div id="cueGroups"></div>
+      <article id="cueResult" class="cue-result" hidden>
+        <div class="cue-grid">
+          <svg id="vaPlot" viewBox="0 0 200 200" class="va" role="img" aria-label="정서가-각성 평면"></svg>
+          <div>
+            <h3 id="cueState">—</h3>
+            <p id="cueMeta" class="mono muted"></p>
+            <ul id="cueNotes"></ul>
+          </div>
+        </div>
+        <ul id="cueEvidence" class="evidence-list"></ul>
+      </article>
+    </section>
+
+    <!-- ───────── 기록 ───────── -->
+    <section id="tab-log" class="tab" hidden aria-labelledby="h-log">
+      <div class="section-head"><h2 id="h-log">기록</h2><span id="logMeta" class="muted mono"></span></div>
+      <div id="logTiles" class="tiles"></div>
+      <h3>최근 7일 · 상황별 횟수</h3>
+      <div class="chart-wrap"><svg id="logChart" viewBox="0 0 720 220" class="chart" role="img" aria-label="최근 7일 일별 상황별 짖음 횟수"></svg></div>
+      <div id="logLegend" class="legend"></div>
+      <h3>최근 기록</h3>
+      <ol id="logList" class="event-list" reversed></ol>
+      <div class="controls">
+        <button id="logExport" class="btn small" type="button">JSON 내보내기</button>
+        <button id="logClear" class="btn small danger" type="button">기록 지우기</button>
+      </div>
+      <textarea id="logJson" class="json" hidden readonly rows="8" aria-label="내보낸 JSON"></textarea>
+      <p class="muted small">기록은 이 브라우저에만 저장됩니다(서버 전송 없음).</p>
+    </section>
+
+    <!-- ───────── 근거 ───────── -->
+    <section id="tab-evidence" class="tab" hidden aria-labelledby="h-ev">
+      <h2 id="h-ev">근거</h2>
+      <p class="muted">앱의 모든 규칙은 아래 논문의 반복된 결과에서 왔습니다. 제목을 누르면 DOI 페이지로 이동합니다.</p>
+      <div class="rule-table-wrap">
+        <table class="rule-table">
+          <caption>소리 특징 → 상황 (문헌 요약)</caption>
+          <thead><tr><th>음높이</th><th>음색</th><th>반복</th><th>가장 흔한 상황</th><th>출처</th></tr></thead>
+          <tbody>
+            <tr><td>낮음</td><td>거침</td><td>빠름</td><td>경계 · 위협</td><td>Yin 2004 · Pongrácz 2006</td></tr>
+            <tr><td>높음</td><td>맑음</td><td>빠름 · 불규칙</td><td>놀이 · 기쁨</td><td>Pongrácz 2006</td></tr>
+            <tr><td>높음</td><td>맑음</td><td>느림 · 띄엄띄엄</td><td>외로움 · 분리</td><td>Yin 2004 · Lenkei 2021</td></tr>
+            <tr><td>높음</td><td>거침~보통</td><td>느림</td><td>두려움 · 절망</td><td>Pongrácz 2006</td></tr>
+            <tr><td>중간</td><td>보통</td><td>중간</td><td>요구 · 관심</td><td>Molnár 2008 (ball/walk)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="papers"></div>
+      <h3>공개 데이터셋</h3>
+      <ul id="datasets" class="evidence-list"></ul>
+    </section>
+
+    <!-- ───────── 설정 ───────── -->
+    <section id="tab-settings" class="tab" hidden aria-labelledby="h-set">
+      <h2 id="h-set">강아지 · 설정</h2>
+      <form id="profileForm" class="form" autocomplete="off">
+        <label for="dogName">이름<input id="dogName" name="dogName" type="text" maxlength="20" placeholder="예: 초코"></label>
+        <label for="dogSize">몸집 (기준 음역을 정합니다)
+          <select id="dogSize" name="dogSize">
+            <option value="small">소형 (7 kg 이하) · 기준 850 Hz</option>
+            <option value="medium">중형 (7–20 kg) · 기준 600 Hz</option>
+            <option value="large">대형 (20 kg 이상) · 기준 420 Hz</option>
+          </select>
+        </label>
+        <label for="autoBase" class="check"><input id="autoBase" name="autoBase" type="checkbox" checked> 우리 강아지 소리로 기준 음역 자동 학습 (10회 이상 기록되면 적용)</label>
+        <p id="baseInfo" class="muted small"></p>
+        <label for="sensitivity">검출 민감도 <span id="sensV" class="mono">12 dB</span>
+          <input id="sensitivity" name="sensitivity" type="range" min="6" max="20" step="1" value="12">
+          <span class="muted small">잡음 바닥 대비 시작 문턱. 조용한 집은 낮게, 시끄러운 곳은 높게.</span>
+        </label>
+      </form>
+      <h3>이 샘플의 한계</h3>
+      <ul class="plain">
+        <li>규칙 기반 엔진입니다. 학습 모델이 아니라 논문에서 반복 확인된 관계를 3축으로 옮긴 것입니다.</li>
+        <li>"번역"이 아닙니다. 짖음은 단어가 아니라 등급 신호이며, 같은 소리도 상황에 따라 뜻이 달라집니다.</li>
+        <li>의료·행동 진단이 아닙니다. 반복되는 불안·공격 신호는 수의사·행동 전문가와 상담하세요.</li>
+        <li>휴대폰 마이크는 20 kHz 이상을 못 담습니다. 낑낑의 초고음 성분은 분석에서 빠집니다.</li>
+      </ul>
+      <p class="muted small">BarkLens 샘플 v0.1 · 브라우저에서만 동작하며 소리는 어디에도 전송되지 않습니다.</p>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="주요 탭">
+    <button class="tabbtn" type="button" data-tab="listen" aria-pressed="true"><span class="ico">◉</span>듣기</button>
+    <button class="tabbtn" type="button" data-tab="body" aria-pressed="false"><span class="ico">🐕</span>몸짓</button>
+    <button class="tabbtn" type="button" data-tab="log" aria-pressed="false"><span class="ico">▤</span>기록</button>
+    <button class="tabbtn" type="button" data-tab="evidence" aria-pressed="false"><span class="ico">✎</span>근거</button>
+    <button class="tabbtn" type="button" data-tab="settings" aria-pressed="false"><span class="ico">⚙</span>설정</button>
+  </nav>
+</div>
+<script src="dsp.js"></script>
+<script src="knowledge.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
