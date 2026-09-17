@@ -257,12 +257,25 @@ export function buildSecretaryContext(user: User, today: string): SecretaryConte
     .comments.filter((c) => c.user_id === userId)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .slice(0, 20);
+  const knowledge = listKnowledge(userId)
+    .sort((a, b) => (b.source_date || b.created_at).localeCompare(a.source_date || a.created_at))
+    .slice(0, 25)
+    .map((k) => ({
+      title: k.title,
+      kind: k.kind,
+      venture_id: k.venture_id,
+      summary: k.analyzed ? k.summary : "",
+      insights: k.analysis ? k.analysis.insights : [],
+      source_date: k.source_date,
+      analyzed: k.analyzed,
+    }));
   return {
     userName: user.name,
     today,
     ventures: listVentures(userId),
     tasks: listTasks(userId),
     recentComments: comments,
+    knowledge,
   };
 }
 

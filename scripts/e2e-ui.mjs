@@ -1,7 +1,8 @@
 import { chromium } from "playwright";
 // UI end-to-end check against a running server. Usage: BASE=http://localhost:3000 node scripts/e2e-ui.mjs
 const BASE = process.env.BASE || "http://localhost:3000";
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+// Set CHROMIUM=/path/to/chrome to use a system browser; otherwise Playwright's bundled Chromium (npx playwright install chromium).
+const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
 const errors = [];
 page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));

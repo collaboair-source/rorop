@@ -55,18 +55,30 @@ function TaskDetail() {
 
   // Due date edits are committed after a pause (or on blur) so keyboard typing does not save partial dates.
   const dueTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const dueInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => () => clearTimeout(dueTimer.current), []);
+  // Reflect the saved due date in the (uncontrolled) input without remounting it, so focus survives a save.
+  const savedDue = detail?.task.due_date ?? "";
+  useEffect(() => {
+    if (dueInputRef.current && dueInputRef.current.value !== savedDue) dueInputRef.current.value = savedDue;
+  }, [savedDue]);
   function commitDue(value: string) {
     clearTimeout(dueTimer.current);
-    const current = detail?.task.due_date ?? "";
-    if (value === current) return;
-    if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
-    if (value && Number(value.slice(0, 4)) < 1970) return; // partial year while typing
-    void save("due_date", { due_date: value || null });
+    // An empty value also appears while a segment is being retyped; clearing is only done via the ✕ button.
+    if (!value) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
+    if (Number(value.slice(0, 4)) < 1970) return; // partial year while typing
+    if (value === (detail?.task.due_date ?? "")) return;
+    void save("due_date", { due_date: value });
   }
   function scheduleDueSave(value: string) {
     clearTimeout(dueTimer.current);
+    if (!value) return;
     dueTimer.current = setTimeout(() => commitDue(value), 700);
+  }
+  async function clearDue() {
+    clearTimeout(dueTimer.current);
+    if (await save("due_date", { due_date: null }) && dueInputRef.current) dueInputRef.current.value = "";
   }
 
   // Title editing
@@ -74,6 +86,9 @@ function TaskDetail() {
   const [titleDraft, setTitleDraft] = useState("");
   // Description editing
   const [editingDesc, setEditingDesc] = useState(false);
+  // Tags editing
+  const [editingTags, setEditingTags] = useState(false);
+  const [tagsDraft, setTagsDraft] = useState("");
   const [descDraft, setDescDraft] = useState("");
 
   useEffect(() => {
@@ -315,15 +330,15 @@ function TaskDetail() {
             <span className="block text-xs font-medium text-gray-500 mb-1">기한</span>
             <div className="flex gap-1.5">
               <Input
+                ref={dueInputRef}
                 type="date"
-                key={task.due_date ?? "none"}
                 defaultValue={task.due_date ?? ""}
                 disabled={busy}
                 onChange={(e) => scheduleDueSave(e.target.value)}
                 onBlur={(e) => commitDue(e.target.value)}
               />
               {task.due_date && (
-                <Button type="button" size="sm" variant="ghost" onClick={() => save("due_date", { due_date: null })} disabled={busy} title="기한 지우기" aria-label="기한 지우기">
+                <Button type="button" size="sm" variant="ghost" onClick={clearDue} disabled={busy} title="기한 지우기" aria-label="기한 지우기">
                   ✕
                 </Button>
               )}
@@ -405,8 +420,43 @@ function TaskDetail() {
             <Checklist task={task} onChange={setTask} />
           </Card>
 
-          {task.tags.length > 0 && (
-            <Card title="태그">
+          <Card
+            title="태그"
+            actions={
+              !editingTags && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setTagsDraft(task.tags.join(", "));
+                    setEditingTags(true);
+                  }}
+                >
+                  ✎ 수정
+                </Button>
+              )
+            }
+          >
+            {editingTags ? (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const tags = Array.from(new Set(tagsDraft.split(",").map((t) => t.trim()).filter(Boolean)));
+                  if (await save("tags", { tags })) setEditingTags(false);
+                }}
+                className="flex flex-col sm:flex-row gap-2"
+              >
+                <Input value={tagsDraft} onChange={(e) => setTagsDraft(e.target.value)} placeholder="쉼표로 구분 (예: 디자인, 견적)" autoFocus className="flex-1" />
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setEditingTags(false)} disabled={saving === "tags"}>
+                    취소
+                  </Button>
+                  <Button type="submit" size="sm" loading={saving === "tags"}>
+                    저장
+                  </Button>
+                </div>
+              </form>
+            ) : task.tags.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {task.tags.map((tag) => (
                   <Badge key={tag} className="bg-gray-50 text-gray-600 border-gray-200">
@@ -414,8 +464,10 @@ function TaskDetail() {
                   </Badge>
                 ))}
               </div>
-            </Card>
-          )}
+            ) : (
+              <p className="text-sm text-gray-400">태그가 없습니다. 검색과 분류에 쓰입니다.</p>
+            )}
+          </Card>
         </div>
 
         <div className="space-y-4">

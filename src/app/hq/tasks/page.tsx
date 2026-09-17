@@ -13,20 +13,37 @@ import { daysUntil, localDateKey } from "@/lib/hq/format";
 type StatusFilter = "open" | "todo" | "doing" | "done" | "all";
 type GroupKey = "overdue" | "today" | "week" | "later" | "done";
 
+type DueFilter = "" | "overdue" | "today" | "week" | "none";
+
 interface Filters {
   status: StatusFilter;
   venture: string; // "" = 전체, "none" = 미지정, else venture id
   priority: "" | Priority;
   q: string;
+  due: DueFilter;
+  /** YYYY-MM-DD: only done tasks completed on/after this day (from the command-center tile). */
+  completed_since: string;
 }
 
 const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
   { value: "open", label: "열림" },
-  { value: "todo", label: "할 일" },
+  { value: "todo", label: "대기" },
   { value: "doing", label: "진행 중" },
   { value: "done", label: "완료" },
   { value: "all", label: "전체" },
 ];
+
+const DUE_CHIPS: { value: DueFilter; label: string }[] = [
+  { value: "", label: "기한: 전체" },
+  { value: "overdue", label: "지남" },
+  { value: "today", label: "오늘" },
+  { value: "week", label: "7일 내" },
+  { value: "none", label: "없음" },
+];
+
+function isDueFilter(v: string | null): v is DueFilter {
+  return v === "" || v === "overdue" || v === "today" || v === "week" || v === "none";
+}
 
 const GROUPS: { key: GroupKey; label: string; labelClass: string }[] = [
   { key: "overdue", label: "기한 지남", labelClass: "text-red-600" },
@@ -36,7 +53,7 @@ const GROUPS: { key: GroupKey; label: string; labelClass: string }[] = [
   { key: "done", label: "완료", labelClass: "text-green-700" },
 ];
 
-const DEFAULT_FILTERS: Filters = { status: "open", venture: "", priority: "", q: "" };
+const DEFAULT_FILTERS: Filters = { status: "open", venture: "", priority: "", q: "", due: "", completed_since: "" };
 
 function isStatusFilter(v: string | null): v is StatusFilter {
   return v === "open" || v === "todo" || v === "doing" || v === "done" || v === "all";
@@ -49,11 +66,15 @@ function isPriority(v: string | null): v is Priority {
 function filtersFromParams(sp: URLSearchParams): Filters {
   const status = sp.get("status");
   const priority = sp.get("priority");
+  const due = sp.get("due");
+  const since = sp.get("completed_since") || "";
   return {
     status: isStatusFilter(status) ? status : DEFAULT_FILTERS.status,
     venture: sp.get("venture_id") || "",
     priority: isPriority(priority) ? priority : "",
     q: (sp.get("q") || "").trim(),
+    due: isDueFilter(due) ? due : "",
+    completed_since: /^\d{4}-\d{2}-\d{2}$/.test(since) ? since : "",
   };
 }
 
@@ -63,6 +84,8 @@ function paramsFromFilters(f: Filters): string {
   if (f.venture) sp.set("venture_id", f.venture);
   if (f.priority) sp.set("priority", f.priority);
   if (f.q) sp.set("q", f.q);
+  if (f.due) sp.set("due", f.due);
+  if (f.completed_since) sp.set("completed_since", f.completed_since);
   return sp.toString();
 }
 
@@ -100,6 +123,10 @@ function SearchBox({ committed, onCommit }: { committed: string; onCommit: (q: s
   const ref = useRef<HTMLInputElement>(null);
   const lastCommitted = useRef(committed);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const onCommitRef = useRef(onCommit);
+  useEffect(() => {
+    onCommitRef.current = onCommit;
+  }, [onCommit]);
 
   useEffect(() => {
     if (committed !== lastCommitted.current) {
@@ -116,7 +143,7 @@ function SearchBox({ committed, onCommit }: { committed: string; onCommit: (q: s
       const q = raw.trim();
       if (q !== lastCommitted.current) {
         lastCommitted.current = q;
-        onCommit(q);
+        onCommitRef.current(q);
       }
     }, 300);
   }
@@ -146,6 +173,13 @@ function TasksPageInner() {
   const loading = result?.key !== filterKey;
   const loadError = result && result.key === filterKey ? result.error : "";
   const [error, setError] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
+  // Filters applied but not yet reflected by the router (navigation is async): merge over these,
+  // and resync whenever the URL actually changes (back/forward, links).
+  const pending = useRef(filters);
+  useEffect(() => {
+    pending.current = filters;
+  }, [filters]);
   const [ventures, setVentures] = useState<VentureWithStats[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [notice, setNotice] = useState("");
@@ -154,11 +188,13 @@ function TasksPageInner() {
   // Filter changes are written to the URL; the derived `filters` follow.
   const applyFilters = useCallback(
     (patch: Partial<Filters>) => {
-      const next = { ...filters, ...patch };
+      const next = { ...pending.current, ...patch };
       const qs = paramsFromFilters(next);
-      if (qs !== filterKey) router.replace(qs ? `/hq/tasks?${qs}` : "/hq/tasks", { scroll: false });
+      if (qs === paramsFromFilters(pending.current)) return;
+      pending.current = next;
+      router.replace(qs ? `/hq/tasks?${qs}` : "/hq/tasks", { scroll: false });
     },
-    [filters, filterKey, router]
+    [router]
   );
 
   // Ventures for the select + create form.
@@ -179,29 +215,40 @@ function TasksPageInner() {
   }, []);
 
   // Tasks for the current filters.
-  const loadTasks = useCallback(async (signal?: AbortSignal) => {
-    const key = paramsFromFilters(filters);
-    try {
+  // State updates happen only inside promise callbacks (safe to call from the effect below).
+  const loadTasks = useCallback(
+    (signal?: AbortSignal) => {
+      const key = paramsFromFilters(filters);
       const sp = new URLSearchParams();
       sp.set("status", filters.status);
       if (filters.venture) sp.set("venture_id", filters.venture);
       if (filters.priority) sp.set("priority", filters.priority);
       if (filters.q) sp.set("q", filters.q);
-      const res = await fetch(`/api/hq/tasks?${sp.toString()}`, { signal });
-      if (!res.ok) throw new Error(await readError(res, "할 일을 불러오지 못했습니다"));
-      const data = (await res.json()) as { tasks: TaskWithVenture[] };
-      if (!signal?.aborted) setResult({ key, tasks: data.tasks, error: "" });
-    } catch (err) {
-      if (signal?.aborted) return;
-      setResult((prev) => ({ key, tasks: prev?.tasks ?? [], error: errorMessage(err, "할 일을 불러오지 못했습니다") }));
-    }
-  }, [filters]);
+      if (filters.due) sp.set("due", filters.due);
+      if (filters.completed_since) sp.set("completed_since", filters.completed_since);
+      return fetch(`/api/hq/tasks?${sp.toString()}`, { signal })
+        .then(async (res) => {
+          if (!res.ok) throw new Error(await readError(res, "할 일을 불러오지 못했습니다"));
+          return (await res.json()) as { tasks: TaskWithVenture[] };
+        })
+        .then((data) => {
+          if (!signal?.aborted) setResult({ key, tasks: data.tasks, error: "" });
+        })
+        .catch((err: unknown) => {
+          if (signal?.aborted) return;
+          // A failed load never masquerades as a result for the new filter: keep the old list under its own key.
+          const message = errorMessage(err, "할 일을 불러오지 못했습니다");
+          setResult((prev) => (prev && prev.key === key ? { ...prev, error: message } : { key, tasks: [], error: message }));
+        });
+    },
+    [filters]
+  );
 
   useEffect(() => {
     const controller = new AbortController();
     loadTasks(controller.signal);
     return () => controller.abort();
-  }, [loadTasks]);
+  }, [loadTasks, reloadToken]);
 
   const updateTask = useCallback((updated: TaskWithVenture) => {
     setResult((prev) => (prev ? { ...prev, tasks: prev.tasks.map((t) => (t.id === updated.id ? updated : t)) } : prev));
@@ -213,7 +260,8 @@ function TasksPageInner() {
     return map;
   }, [tasks, today]);
 
-  const filterActive = filters.venture !== "" || filters.priority !== "" || filters.q !== "";
+  const filterActive = filters.venture !== "" || filters.priority !== "" || filters.q !== "" || filters.due !== "" || filters.completed_since !== "";
+  const unknownVenture = filters.venture !== "" && filters.venture !== "none" && !ventures.some((v) => v.id === filters.venture);
 
   function emptyCopy(): { title: string; hint: string } {
     if (filters.q) return { title: `"${filters.q}"에 해당하는 할 일이 없습니다`, hint: "검색어를 바꾸거나 필터를 지워보세요" };
@@ -261,12 +309,12 @@ function TasksPageInner() {
           onCreated={(task) => {
             setShowCreate(false);
             const hidden =
-              (filters.status === "done") ||
+              (filters.status === "done" || filters.status === "doing") ||
               (filters.venture === "none" ? !!task.venture_id : filters.venture !== "" && task.venture_id !== filters.venture) ||
               (filters.priority !== "" && task.priority !== filters.priority) ||
               (filters.q !== "" && !task.title.toLowerCase().includes(filters.q.toLowerCase()));
             setNotice(`"${task.title}" 추가됨${hidden ? " — 현재 필터에는 보이지 않습니다" : ""}`);
-            loadTasks();
+            setReloadToken((t) => t + 1);
           }}
         />
       )}
@@ -303,10 +351,39 @@ function TasksPageInner() {
             );
           })}
         </div>
+        <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="기한 필터">
+          {DUE_CHIPS.map((chip) => {
+            const active = filters.due === chip.value;
+            return (
+              <button
+                key={chip.value || "all"}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => applyFilters({ due: chip.value })}
+                className={cx(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  active ? "bg-gray-800 border-gray-800 text-white" : "bg-white border-gray-300 text-gray-600 hover:border-gray-500 hover:text-gray-900"
+                )}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+          {filters.completed_since && (
+            <span className="text-xs text-gray-500 ml-1">
+              {filters.completed_since} 이후 완료만 ·{" "}
+              <button type="button" className="text-indigo-600 hover:underline" onClick={() => applyFilters({ completed_since: "" })}>
+                해제
+              </button>
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <Select value={filters.venture} onChange={(e) => applyFilters({ venture: e.target.value })} aria-label="사업 필터">
             <option value="">사업: 전체</option>
             <option value="none">사업: 미지정</option>
+            {unknownVenture && <option value={filters.venture}>사업: (삭제되었거나 없는 사업)</option>}
             {ventures.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
@@ -395,6 +472,7 @@ function CreateTaskForm({
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
   const [checklistText, setChecklistText] = useState("");
+  const [tagsText, setTagsText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -419,6 +497,7 @@ function CreateTaskForm({
           due_date: dueDate || undefined,
           description: description.trim() || undefined,
           checklist: checklist.length ? checklist : undefined,
+          tags: tagsText.split(",").map((s) => s.trim()).filter(Boolean),
         }),
       });
       if (!res.ok) throw new Error(await readError(res, "할 일을 추가하지 못했습니다"));
@@ -427,6 +506,7 @@ function CreateTaskForm({
       setDueDate("");
       setDescription("");
       setChecklistText("");
+      setTagsText("");
       onCreated(data.task);
     } catch (err) {
       setError(errorMessage(err, "할 일을 추가하지 못했습니다"));
@@ -471,6 +551,9 @@ function CreateTaskForm({
         </Field>
         <Field label="체크리스트" hint="한 줄에 하나">
           <Textarea rows={3} value={checklistText} onChange={(e) => setChecklistText(e.target.value)} placeholder={"자료 조사\n초안 작성\n검토 요청"} />
+        </Field>
+        <Field label="태그" hint="쉼표로 구분">
+          <Input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="디자인, 견적, 투자" />
         </Field>
         <div className="flex justify-end gap-2">
           <Button type="submit" loading={saving} disabled={!title.trim()}>

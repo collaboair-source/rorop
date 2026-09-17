@@ -34,7 +34,7 @@ npm run dev                  # http://localhost:3000
 | `ANTHROPIC_API_KEY` | AI 비서 활성화에 필요. 없으면 비서 기능만 꺼지고 나머지는 동작합니다. |
 | `HQ_AI_ENABLED` | `1`로 두면 API 키 환경변수 없이도 AI를 켭니다 (`ant auth login` 프로필 등 SDK가 스스로 인증을 찾는 경우) |
 | `SECRETARY_MODEL` | 기본 `claude-opus-5` |
-| `JWT_SECRET` | 로그인 토큰 서명 키 (운영에서는 반드시 설정) |
+| `JWT_SECRET` | 로그인 토큰 서명 키. **운영(NODE_ENV=production)에서는 16자 이상 필수** — 없으면 인증 요청이 실패합니다. 개발에서는 기본값 사용 |
 | `RORO_DATA_DIR` | 데이터 저장 폴더. 기본 `./data` (`data/store.json`) |
 | `TZ` | 서버 기본 시간대(예: `Asia/Seoul`). 브라우저가 `hq_tz` 쿠키로 자기 시간대를 보내므로 보통은 없어도 "오늘" 계산이 맞습니다. |
 
@@ -72,7 +72,7 @@ npm run build
 
 # 서버를 띄운 뒤 (npm run dev 또는 npm start)
 BASE=http://localhost:3000 node scripts/smoke-api.mjs   # API 전 구간 스모크
-BASE=http://localhost:3000 node scripts/e2e-ui.mjs      # 브라우저 시나리오 (playwright 필요: npm i --no-save playwright)
+BASE=http://localhost:3000 node scripts/e2e-ui.mjs      # 브라우저 시나리오 (npm i --no-save playwright && npx playwright install chromium, 또는 CHROMIUM=/path/to/chrome)
 BASE=http://localhost:3000 node scripts/screenshots.mjs # 데스크톱/모바일 스크린샷
 ```
 

@@ -7,7 +7,8 @@ const BASE = process.env.BASE || "http://localhost:3000";
 const OUT = process.env.OUT || "./screenshots";
 fs.mkdirSync(OUT, { recursive: true });
 
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || "/opt/pw-browsers/chromium" });
+// Set CHROMIUM=/path/to/chrome to use a system browser; otherwise Playwright's bundled Chromium (npx playwright install chromium).
+const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const results = [];
 for (const [label, viewport] of [["desktop", { width: 1280, height: 900 }], ["mobile", { width: 375, height: 812 }]]) {
   const ctx = await browser.newContext({ viewport });

@@ -151,6 +151,12 @@ export function persist(): void {
     fs.renameSync(tmp, DATA_FILE);
   } catch (err) {
     console.error(`[db] failed to persist ${DATA_FILE}:`, err);
+    // Keep memory consistent with disk: discard the unsaved mutation.
+    try {
+      g.__roropStore = load();
+    } catch (reloadErr) {
+      console.error("[db] could not reload the store after a failed write:", reloadErr);
+    }
     throw new Error("데이터를 디스크에 저장하지 못했습니다. 서버의 data 폴더 권한과 디스크 용량을 확인하세요.");
   }
 }

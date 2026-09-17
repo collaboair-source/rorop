@@ -260,11 +260,13 @@ export default function ProjectDetailPage() {
                         alt={v.label}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                          (e.target as HTMLImageElement).parentElement!.innerHTML =
-                            `<div class="flex items-center justify-center h-full text-gray-400 text-sm">${v.label}</div>`;
+                          // Never inject the user-supplied label as HTML; swap in an escaped React fallback instead.
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = "none";
+                          img.parentElement?.querySelector("[data-fallback]")?.classList.remove("hidden");
                         }}
                       />
+                      <div data-fallback className="hidden items-center justify-center h-full text-gray-400 text-sm">{v.label}</div>
                     </div>
                     <div className="p-3">
                       <div className="flex items-center justify-between">

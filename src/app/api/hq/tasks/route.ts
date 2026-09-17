@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { handler, json, requireUser, readJson, requiredStr, optionalStr, strArray, parsePriority, parseDueDate, parseChecklist, parseTaskStatus } from "@/lib/hq/api";
+import { handler, json, requireUser, readJson, requiredStr, optionalStr, strArray, parsePriority, parseDueDate, parseChecklist, parseTaskStatus, requestToday, addDays, toValidDate } from "@/lib/hq/api";
 import { listTasks, sortTasks, withVenture, createTask } from "@/lib/hq/service";
 import { TASK_STATUSES } from "@/lib/hq/types";
 import type { TaskStatus } from "@/lib/hq/types";
@@ -10,9 +10,19 @@ export const GET = handler(async (req: NextRequest) => {
   const status = sp.get("status");
   const ventureId = sp.get("venture_id");
   const priority = sp.get("priority");
+  const due = sp.get("due");
+  const completedSince = toValidDate(sp.get("completed_since"));
   const q = (sp.get("q") || "").trim().toLowerCase();
 
   let tasks = listTasks(user.id);
+  if (due || completedSince) {
+    const today = await requestToday();
+    if (due === "overdue") tasks = tasks.filter((t) => t.status !== "done" && !!t.due_date && t.due_date < today);
+    else if (due === "today") tasks = tasks.filter((t) => t.due_date === today);
+    else if (due === "week") tasks = tasks.filter((t) => !!t.due_date && t.due_date >= today && t.due_date <= addDays(today, 7));
+    else if (due === "none") tasks = tasks.filter((t) => !t.due_date);
+    if (completedSince) tasks = tasks.filter((t) => t.status === "done" && (t.completed_at || "").slice(0, 10) >= completedSince);
+  }
   if (status && status !== "all") {
     if (status === "open") tasks = tasks.filter((t) => t.status !== "done");
     else if (TASK_STATUSES.includes(status as TaskStatus)) tasks = tasks.filter((t) => t.status === status);

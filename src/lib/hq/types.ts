@@ -21,7 +21,7 @@ export const VENTURE_STATUS_LABEL: Record<VentureStatus, string> = {
 };
 
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
-  todo: "할 일",
+  todo: "대기",
   doing: "진행 중",
   done: "완료",
 };

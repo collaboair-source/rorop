@@ -78,6 +78,7 @@ interface AnalyzeResponse {
   venture: Venture | null;
   tasks: TaskWithVenture[];
   truncated: boolean;
+  skipped_duplicates?: number;
 }
 
 async function parseResponse<T>(res: Response, fallback: string): Promise<T> {
@@ -120,7 +121,8 @@ function AnalyzedBadge({ analyzed }: { analyzed: boolean }) {
 export default function ImportPage() {
   // ---------- AI 상태 ----------
   const [status, setStatus] = useState<StatusResponse | null>(null);
-  const aiEnabled = status?.ai_enabled ?? false;
+  const [statusError, setStatusError] = useState("");
+  const aiEnabled = status ? status.ai_enabled : true;
 
   // ---------- 업로드 / 후보 ----------
   const [tab, setTab] = useState<Tab>("file");
@@ -174,7 +176,8 @@ export default function ImportPage() {
         if (!cancelled) setStatus(data);
       })
       .catch(() => {
-        if (!cancelled) setStatus({ ai_enabled: false, model: "", hint: "AI 상태를 확인하지 못했습니다. 잠시 후 새로고침하세요." });
+        // Unknown ≠ disabled: keep AI actions available and say the check failed.
+        if (!cancelled) setStatusError("AI 상태를 확인하지 못했습니다. 분석을 시도하면 서버가 다시 확인합니다.");
       });
     loadList();
     return () => {
@@ -362,7 +365,8 @@ export default function ImportPage() {
   }
 
   // ---------- 분석 ----------
-  const analyzeOne = useCallback(async (id: string): Promise<boolean> => {
+  /** `recreateTasks=false` on an already-analyzed item refreshes summary/venture without adding tasks again. */
+  const analyzeOne = useCallback(async (id: string, recreateTasks = true): Promise<boolean> => {
     setAnalyzing((prev) => new Set(prev).add(id));
     setNotes((prev) => {
       const next = { ...prev };
@@ -374,11 +378,12 @@ export default function ImportPage() {
       const res = await fetch(`/api/hq/knowledge/${id}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ create_tasks: recreateTasks }),
       });
       const data = await parseResponse<AnalyzeResponse>(res, "분석하지 못했습니다");
       setItems((prev) => prev.map((it) => (it.id === id ? data.item : it)));
       const parts = [data.venture ? `사업 「${data.venture.name}」에 연결` : "사업 미지정", `할 일 ${data.tasks.length}개 등록`];
+      if (data.skipped_duplicates) parts.push(`이미 있는 할 일 ${data.skipped_duplicates}개 건너뜀`);
       if (data.truncated) parts.push("자료가 길어 앞부분만 분석");
       setNotes((prev) => ({ ...prev, [id]: { tone: "ok", text: parts.join(", ") } }));
       ok = true;
@@ -423,7 +428,7 @@ export default function ImportPage() {
   }
 
   async function removeItem(item: KnowledgeListItem) {
-    if (!confirm(`「${item.title}」 자료를 삭제할까요?\n분석으로 만든 할 일은 남습니다.`)) return;
+    if (!confirm(`「${item.title}」 자료를 삭제할까요?\n분석으로 만든 할 일은 남지만, 이 자료에 남긴 코멘트는 함께 삭제됩니다.`)) return;
     setDeleting((prev) => new Set(prev).add(item.id));
     try {
       const res = await fetch(`/api/hq/knowledge/${item.id}`, { method: "DELETE" });
@@ -449,6 +454,9 @@ export default function ImportPage() {
         subtitle="Claude.ai → 설정 → 개인정보(Privacy) → 데이터 내보내기(Export data). 이메일로 받은 zip 안의 conversations.json / projects.json을 올리세요."
       />
 
+      {statusError && !status && (
+        <div className="bg-gray-100 border border-gray-200 text-gray-700 text-sm px-3 py-2 rounded-lg mb-4">{statusError}</div>
+      )}
       {status && !status.ai_enabled && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2 rounded-lg mb-4">
           AI 비서가 꺼져 있어 분석은 할 수 없습니다. 자료 가져오기는 가능합니다.
@@ -717,7 +725,7 @@ export default function ImportPage() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => analyzeOne(it.id)}
+                        onClick={() => analyzeOne(it.id, !it.analyzed)}
                         loading={isAnalyzing}
                         disabled={!aiEnabled || batch !== null || isDeleting}
                         title={!aiEnabled ? "AI 비서가 꺼져 있습니다" : it.analyzed ? "다시 분석 (할 일이 중복될 수 있음)" : "비서가 요약하고 사업·할 일을 뽑아냅니다"}

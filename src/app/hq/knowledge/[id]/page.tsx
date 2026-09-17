@@ -38,6 +38,7 @@ interface AnalyzeResponse {
   tasks: TaskWithVenture[];
   comment: Comment;
   truncated: boolean;
+  skipped_duplicates?: number;
 }
 
 async function parseResponse<T>(res: Response, fallback: string): Promise<T> {
@@ -93,7 +94,8 @@ function KnowledgeDetail() {
   const [deleting, setDeleting] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const aiEnabled = status?.ai_enabled ?? false;
+  const [statusError, setStatusError] = useState("");
+  const aiEnabled = status ? status.ai_enabled : true;
 
   // State updates happen only inside promise callbacks so this is safe to call from effects and handlers.
   const load = useCallback(
@@ -125,7 +127,8 @@ function KnowledgeDetail() {
         if (!cancelled) setStatus(data);
       })
       .catch(() => {
-        if (!cancelled) setStatus({ ai_enabled: false, model: "", hint: "AI 상태를 확인하지 못했습니다." });
+        // Unknown ≠ disabled: keep the analyze button available.
+        if (!cancelled) setStatusError("AI 상태를 확인하지 못했습니다. 분석을 시도하면 서버가 다시 확인합니다.");
       });
     fetch("/api/hq/ventures")
       .then((res) => parseResponse<{ ventures: VentureWithStats[] }>(res, "사업 목록을 불러오지 못했습니다"))
@@ -189,6 +192,7 @@ function KnowledgeDetail() {
       }
       setComments((prev) => [...prev, data.comment]);
       const parts = [data.venture ? `사업 「${data.venture.name}」에 연결` : "사업 미지정", `할 일 ${data.tasks.length}개 등록`];
+      if (data.skipped_duplicates) parts.push(`이미 있는 할 일 ${data.skipped_duplicates}개 건너뜀`);
       if (data.truncated) parts.push("자료가 길어 앞부분만 분석");
       setAnalyzeNote(parts.join(", "));
       setRecreateTasks(false);
@@ -201,7 +205,7 @@ function KnowledgeDetail() {
 
   async function remove() {
     if (!item || deleting) return;
-    if (!confirm(`「${item.title}」 자료를 삭제할까요?\n분석으로 만든 할 일은 남습니다.`)) return;
+    if (!confirm(`「${item.title}」 자료를 삭제할까요?\n분석으로 만든 할 일은 남지만, 코멘트 ${comments.length}개는 함께 삭제됩니다.`)) return;
     setDeleting(true);
     setActionError("");
     try {
@@ -307,6 +311,7 @@ function KnowledgeDetail() {
         </span>
       </div>
 
+      {statusError && !status && <div className="bg-gray-100 border border-gray-200 text-gray-700 text-sm px-3 py-2 rounded-lg mb-4">{statusError}</div>}
       {status && !status.ai_enabled && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2 rounded-lg mb-4">
           AI 비서가 꺼져 있어 분석할 수 없습니다.{status.hint ? ` ${status.hint}` : ""}

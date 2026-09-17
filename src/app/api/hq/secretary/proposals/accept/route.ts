@@ -21,12 +21,13 @@ export const POST = handler(async (req: NextRequest) => {
     if (existing) return json({ task: withVenture(user.id, existing), proposal });
   }
 
-  let ventureId = proposal.venture_id;
+  // A proposal may reference a venture that was deleted since; fall back to find-or-create by name.
+  let ventureId =
+    proposal.venture_id && getStore().ventures.some((v) => v.id === proposal.venture_id && v.user_id === user.id) ? proposal.venture_id : null;
   if (!ventureId && proposal.venture_name) {
     const found = findVentureByName(user.id, proposal.venture_name);
     ventureId = found ? found.id : createVenture(user.id, { name: proposal.venture_name, source: "secretary", source_ref: message.id }).id;
   }
-  if (ventureId && !getStore().ventures.some((v) => v.id === ventureId && v.user_id === user.id)) ventureId = null;
 
   const task = createTask(user.id, {
     title: proposal.title.trim(),

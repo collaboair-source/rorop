@@ -85,16 +85,29 @@ function isValidDate(value: string | null): value is string {
 // Context rendering
 // ---------------------------------------------------------------------------
 
+export interface KnowledgeDigest {
+  title: string;
+  kind: string;
+  venture_id: string | null;
+  summary: string;
+  insights: string[];
+  source_date: string | null;
+  analyzed: boolean;
+}
+
 export interface SecretaryContext {
   userName: string;
   today: string;
   ventures: Venture[];
   tasks: Task[];
   recentComments: Comment[];
+  /** Imported Claude material (analyzed summaries first), most recent first. */
+  knowledge: KnowledgeDigest[];
 }
 
 const MAX_CONTEXT_TASKS = 80;
 const MAX_CONTEXT_COMMENTS = 20;
+const MAX_CONTEXT_KNOWLEDGE = 25;
 
 function clip(text: string, max: number): string {
   const t = text.replace(/\s+/g, " ").trim();
@@ -150,6 +163,21 @@ export function renderContext(ctx: SecretaryContext): string {
     lines.push(`## 최근 코멘트`);
     for (const c of comments) {
       lines.push(`- ${c.created_at.slice(0, 10)} [${c.author === "user" ? "사용자" : "비서"}] (${c.target_type} ${c.target_id}) ${clip(c.body, 160)}`);
+    }
+    lines.push("");
+  }
+  const knowledge = (ctx.knowledge || []).slice(0, MAX_CONTEXT_KNOWLEDGE);
+  if (knowledge.length) {
+    lines.push(`## 가져온 자료 (Claude 대화·문서, 최근 ${knowledge.length}개)`);
+    for (const k of knowledge) {
+      const date = k.source_date ? k.source_date.slice(0, 10) : "";
+      const head = `- ${date} [${k.kind}] ${k.title} (${ventureName(k.venture_id)})`;
+      if (!k.analyzed) {
+        lines.push(`${head} — 아직 분석 전`);
+        continue;
+      }
+      lines.push(`${head}: ${clip(k.summary, 240)}`);
+      for (const i of k.insights.slice(0, 3)) lines.push(`  · ${clip(i, 140)}`);
     }
   }
   return lines.join("\n");

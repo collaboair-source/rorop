@@ -133,6 +133,11 @@ export default function HqCommandCenterPage() {
   }, [load]);
 
   const aiEnabled = data?.ai_enabled ?? false;
+  const weekAgo = useMemo(() => {
+    const [y, m, d] = (data?.today ?? today).split("-").map(Number);
+    const dt = new Date(y, m - 1, d - 7);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  }, [data?.today, today]);
 
   async function generateBriefing() {
     if (!aiEnabled || generating) return;
@@ -242,8 +247,8 @@ export default function HqCommandCenterPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <StatTile label="열린 할 일" value={data.stats.open_tasks} href="/hq/tasks?status=open" />
             <StatTile label="진행 중" value={data.stats.doing_tasks} tone="accent" href="/hq/tasks?status=doing" />
-            <StatTile label="기한 지남" value={data.stats.overdue_tasks} tone={data.stats.overdue_tasks > 0 ? "danger" : "default"} href="/hq/tasks?status=open" />
-            <StatTile label="이번 주 완료" value={data.stats.done_this_week} tone="success" href="/hq/tasks?status=done" />
+            <StatTile label="기한 지남" value={data.stats.overdue_tasks} tone={data.stats.overdue_tasks > 0 ? "danger" : "default"} href="/hq/tasks?due=overdue" />
+            <StatTile label="이번 주 완료" value={data.stats.done_this_week} tone="success" href={`/hq/tasks?status=done&completed_since=${weekAgo}`} />
             <StatTile
               label="진행 중 사업 / 전체"
               value={

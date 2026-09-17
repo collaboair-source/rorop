@@ -228,7 +228,7 @@ function VentureDetail() {
   // ---------- 삭제 ----------
   async function remove() {
     if (!venture) return;
-    const ok = confirm(`"${venture.name}" 사업을 삭제할까요?\n연결된 할 일은 남고 사업 연결만 해제됩니다.`);
+    const ok = confirm(`"${venture.name}" 사업을 삭제할까요?\n연결된 할 일은 남고 사업 연결만 해제되지만, 이 사업의 코멘트 ${comments.length}개는 함께 삭제됩니다.`);
     if (!ok) return;
     setDeleting(true);
     setError("");

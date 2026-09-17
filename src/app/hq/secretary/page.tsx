@@ -42,6 +42,7 @@ export default function SecretaryPage() {
   const listRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
 
+  const [statusError, setStatusError] = useState("");
   const aiEnabled = status?.ai_enabled ?? true;
   const sending = pending !== null;
 
@@ -56,7 +57,9 @@ export default function SecretaryPage() {
       if (statusRes.ok) {
         setStatus(statusData as unknown as StatusResponse);
       } else {
-        setStatus({ ai_enabled: false, model: "", hint: errorOf(statusData, AI_OFF_HINT) });
+        // Unknown ≠ disabled: leave the composer usable; the server answers 503 if AI is really off.
+        setStatus(null);
+        setStatusError(errorOf(statusData, "AI 상태를 확인하지 못했습니다."));
       }
       setMessages(Array.isArray(messagesData.messages) ? (messagesData.messages as SecretaryMessage[]) : []);
     } catch (err) {
@@ -192,6 +195,7 @@ export default function SecretaryPage() {
         }
       />
 
+      {statusError && !status && <div className="bg-gray-100 border border-gray-200 text-gray-700 text-sm px-3 py-2 rounded-lg mb-4">{statusError}</div>}
       {status && !status.ai_enabled && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 whitespace-pre-line">
           {status.hint || AI_OFF_HINT}
