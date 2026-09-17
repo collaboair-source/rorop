@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { getCurrentUser } from "@/lib/auth";
-import { getStore } from "@/lib/db";
+import { getStore, persist } from "@/lib/db";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
   };
 
   store.projects.push(project);
+  persist();
 
   return NextResponse.json({ project }, { status: 201 });
 }

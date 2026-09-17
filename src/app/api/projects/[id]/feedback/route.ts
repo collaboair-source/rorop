@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { getCurrentUser } from "@/lib/auth";
-import { getStore } from "@/lib/db";
+import { getStore, persist } from "@/lib/db";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (project.revision_used >= project.revision_limit) {
     project.status = "over_limit";
   }
+  persist();
 
   return NextResponse.json({ feedback, revision_used: project.revision_used }, { status: 201 });
 }

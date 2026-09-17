@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import { getStore } from "@/lib/db";
+import { getStore, persist } from "@/lib/db";
 import { signToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
   };
 
   store.users.push(user);
+  persist();
 
   const token = signToken({ id: user.id, email: user.email, role: user.role });
 

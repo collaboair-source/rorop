@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { getCurrentUser } from "@/lib/auth";
-import { getStore } from "@/lib/db";
+import { getStore, persist } from "@/lib/db";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   store.selections.push(selection);
   project.status = "completed";
+  persist();
 
   return NextResponse.json({ selection }, { status: 201 });
 }

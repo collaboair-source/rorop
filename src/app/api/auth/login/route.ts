@@ -30,3 +30,16 @@ export async function POST(req: NextRequest) {
 
   return res;
 }
+
+/** Log out: clear the httpOnly session cookie (JavaScript cannot). */
+export async function DELETE() {
+  const res = NextResponse.json({ ok: true });
+  res.cookies.set("token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/",
+  });
+  return res;
+}

@@ -9,7 +9,7 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => {
-        if (r.ok) router.replace("/dashboard");
+        if (r.ok) router.replace("/hq");
         else router.replace("/login");
       })
       .catch(() => router.replace("/login"));

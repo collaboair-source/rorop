@@ -7,9 +7,13 @@ export default function Navbar({ user }: { user: { name: string; role: string } 
   const router = useRouter();
 
   async function handleLogout() {
-    await fetch("/api/auth/login", { method: "DELETE" });
-    document.cookie = "token=; path=/; max-age=0";
+    const res = await fetch("/api/auth/login", { method: "DELETE" }).catch(() => null);
+    if (!res || !res.ok) {
+      alert("로그아웃에 실패했습니다. 다시 시도하세요.");
+      return;
+    }
     router.push("/login");
+    router.refresh();
   }
 
   return (
@@ -19,6 +23,9 @@ export default function Navbar({ user }: { user: { name: string; role: string } 
           RevisionMgr
         </Link>
         <div className="flex items-center gap-4">
+          <Link href="/hq" className="text-sm text-gray-500 hover:text-indigo-600">
+            HQ로 이동
+          </Link>
           <span className="text-sm text-gray-500">
             {user.name}{" "}
             <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700">

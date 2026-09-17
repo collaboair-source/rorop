@@ -73,7 +73,6 @@ export default function DashboardPage() {
 
   const overLimit = projects.filter((p) => p.revision_used >= p.revision_limit && p.status !== "completed");
   const active = projects.filter((p) => p.status === "active");
-  const completed = projects.filter((p) => p.status === "completed");
 
   return (
     <div className="min-h-screen">
