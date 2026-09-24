@@ -102,6 +102,53 @@ if (ov.stats.open_tasks !== 2 || ov.stats.doing_tasks !== 1 || ov.stats.done_thi
 }
 if (ov.stats.knowledge_count !== 2) { console.log("FAIL knowledge count"); failures++; }
 
+// search across everything
+const sr = await call("GET", "/api/hq/search?q=" + encodeURIComponent("로고"));
+if (!sr.hits.some((h) => h.kind === "knowledge") || !sr.hits.some((h) => h.kind === "task")) { console.log("FAIL search should find the task and knowledge item", JSON.stringify(sr.counts)); failures++; }
+const sr2 = await call("GET", "/api/hq/search?q=" + encodeURIComponent("클라이언트 A안"));
+if (!sr2.hits.some((h) => h.kind === "comment")) { console.log("FAIL search should find the comment"); failures++; }
+const sr3 = await call("GET", "/api/hq/search?q=");
+if (sr3.hits.length !== 0) { console.log("FAIL empty query returns nothing"); failures++; }
+
+// venture review + weekly review (AI; 503 without a key)
+await call("POST", `/api/hq/ventures/${v.id}/review`, undefined, [201, 503, 502, 429]);
+await call("POST", "/api/hq/secretary/briefing", { kind: "weekly" }, [201, 503, 502, 429]);
+await call("POST", "/api/hq/secretary/briefing", { kind: "monthly" }, 400);
+
+// backup round-trip: export, wipe by restoring an empty backup, restore the export
+const backupRes = await fetch(BASE + "/api/hq/backup", { headers: { cookie } });
+const backup = await backupRes.json();
+console.log(`${backupRes.status === 200 ? "ok " : "FAIL"} GET /api/hq/backup -> ${backupRes.status}`);
+if (backupRes.status !== 200) failures++;
+if (backup.format !== "rorop-hq-backup" || backup.data.tasks.length !== 3 || backup.data.knowledge.length !== 2) { console.log("FAIL backup contents", backup.format, backup.data?.tasks?.length); failures++; }
+await call("POST", "/api/hq/backup", { backup, confirm: "no" }, 400);
+await call("POST", "/api/hq/backup", { backup: { format: "other" }, confirm: "REPLACE" }, 400);
+const empty = { ...backup, data: { ventures: [], tasks: [], comments: [], knowledge: [], secretary_messages: [], briefings: [] } };
+await call("POST", "/api/hq/backup", { backup: empty, confirm: "REPLACE" });
+const afterWipe = await call("GET", "/api/hq/tasks?status=all");
+if (afterWipe.tasks.length !== 0) { console.log("FAIL restore(empty) should wipe tasks"); failures++; }
+const restored = await call("POST", "/api/hq/backup", { backup, confirm: "REPLACE" });
+if (restored.restored.tasks !== 3 || restored.restored.comments !== 2) { console.log("FAIL restore counts", JSON.stringify(restored.restored)); failures++; }
+// ids are re-minted on restore; links must still hold together
+const restoredVentures = (await call("GET", "/api/hq/ventures")).ventures;
+const rv = restoredVentures.find((x) => x.name === "카페 브랜딩");
+const restoredTasks = (await call("GET", "/api/hq/tasks?status=all")).tasks;
+const rt = restoredTasks.find((x) => x.title === "로고 시안 3개 보내기");
+if (!rv || !rt || rt.venture_id !== rv.id || rt.id === t1.id) { console.log("FAIL restore should re-link tasks to the restored venture with fresh ids"); failures++; }
+const rtDetail = await call("GET", `/api/hq/tasks/${rt.id}`);
+if (rtDetail.comments.length !== 1 || rtDetail.task.checklist.length !== 3) { console.log("FAIL restored task should keep its comment and checklist"); failures++; }
+await call("GET", `/api/hq/tasks/${t1.id}`, undefined, 404);
+// a malformed row is rejected before anything is replaced
+const broken = { ...backup, data: { ...backup.data, tasks: [{ id: "x" }] } };
+await call("POST", "/api/hq/backup", { backup: broken, confirm: "REPLACE" }, 400);
+const stillThere = await call("GET", `/api/hq/tasks/${rt.id}`);
+if (stillThere.task.title !== "로고 시안 3개 보내기") { console.log("FAIL rejected restore must not touch data"); failures++; }
+// later steps refer to the restored ids
+Object.assign(v, { id: rv.id }); Object.assign(t1, { id: rt.id });
+const rt2 = restoredTasks.find((x) => x.title === "간판 견적 받기"); Object.assign(t2, { id: rt2.id });
+const rk = (await call("GET", "/api/hq/knowledge")).items.find((x) => x.title === "카페 로고 대화"); Object.assign(k, { id: rk.id });
+const rc = rtDetail.comments[0]; Object.assign(c, { id: rc.id });
+
 // isolation: a second user must not see the first user's data
 const savedCookie = cookie; cookie = "";
 await call("POST", "/api/auth/register", { email: `other-${Date.now()}@example.com`, password: "secret123", name: "다른 사람", role: "client" });

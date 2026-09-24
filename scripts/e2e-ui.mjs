@@ -99,6 +99,27 @@ await page.click('button:has-text("남기기")');
 await page.waitForSelector("text=첫 코멘트");
 check(true, "comment posts and renders");
 
+// global search: sidebar box → /hq/search, hits across kinds, kind filter chips
+await page.goto(`${BASE}/hq`);
+await page.fill('input[aria-label="전체 검색"]', "간판");
+await page.press('input[aria-label="전체 검색"]', "Enter");
+await page.waitForURL(/\/hq\/search\?q=/);
+await page.waitForFunction(() => document.body.innerText.includes("간판 견적 받기"), null, { timeout: 10000 });
+check(true, "sidebar search navigates to /hq/search and finds the task");
+check((await page.locator("mark").count()) > 0, "search page highlights matches");
+
+// settings: backup download link and restore validation
+await page.goto(`${BASE}/hq/settings`);
+await page.waitForSelector('a[href="/api/hq/backup"]');
+check(true, "settings page shows the backup download link");
+const backupJson = await page.evaluate(async () => (await fetch("/api/hq/backup")).json());
+check(backupJson.format === "rorop-hq-backup" && backupJson.data.tasks.length >= 3, "backup endpoint returns this user's data");
+
+// weekly review card exists on the command center (AI disabled here → button disabled or 503 message)
+await page.goto(`${BASE}/hq`);
+await page.waitForSelector("text=주간 회고");
+check(true, "command center shows the weekly review card");
+
 if (errors.length) { console.log("browser errors:\n  " + errors.join("\n  ")); failures++; }
 console.log(failures ? `${failures} FAILURE(S)` : "ALL OK");
 await browser.close();

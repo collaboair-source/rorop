@@ -141,13 +141,67 @@ export interface SecretaryMessage {
   created_at: string;
 }
 
+export type BriefingKind = "daily" | "weekly";
+
 export interface Briefing {
   id: string;
   user_id: string;
   /** YYYY-MM-DD in the user's local day */
   date: string;
+  /** Missing on records written before weekly reviews existed → treat as "daily". */
+  kind?: BriefingKind;
   content: string;
   created_at: string;
+}
+
+// ---------- search ----------
+
+export type SearchHitKind = "venture" | "task" | "knowledge" | "comment";
+
+export interface SearchHit {
+  kind: SearchHitKind;
+  id: string;
+  title: string;
+  /** Short excerpt around the first match, plain text. */
+  snippet: string;
+  /** Where to navigate. */
+  href: string;
+  score: number;
+  meta: string;
+  updated_at: string;
+}
+
+export interface SearchResponse {
+  q: string;
+  hits: SearchHit[];
+  counts: Record<SearchHitKind, number>;
+  truncated: boolean;
+}
+
+// ---------- backup ----------
+
+export interface BackupFile {
+  format: "rorop-hq-backup";
+  version: 1;
+  exported_at: string;
+  user: { email: string; name: string };
+  data: {
+    ventures: Venture[];
+    tasks: Task[];
+    comments: Comment[];
+    knowledge: KnowledgeItem[];
+    secretary_messages: SecretaryMessage[];
+    briefings: Briefing[];
+  };
+}
+
+export interface BackupSummary {
+  ventures: number;
+  tasks: number;
+  comments: number;
+  knowledge: number;
+  secretary_messages: number;
+  briefings: number;
 }
 
 // ---------- API response shapes (what the client pages consume) ----------
@@ -195,6 +249,8 @@ export interface OverviewResponse {
   };
   ventures: VentureWithStats[];
   briefing: Briefing | null;
+  /** Latest weekly review, if any. */
+  weekly_review: Briefing | null;
   recent_comments: CommentWithTarget[];
 }
 

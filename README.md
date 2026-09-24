@@ -16,6 +16,10 @@ Claude 기반 **AI 비서**가 브리핑·조언·할 일 제안을 합니다.
 | `/hq/secretary` | AI 비서와 대화, 제안된 할 일을 한 번에 등록 |
 | `/hq/import` | Claude 데이터 내보내기(`conversations.json`, `projects.json`) 업로드 또는 텍스트 붙여넣기 → AI 분석 → 사업/할 일 자동 생성 |
 | `/hq/knowledge/:id` | 가져온 자료 상세: 요약, 비서의 관찰, 도출된 할 일, 원문 |
+| `/hq/search?q=` | 전체 검색: 사업·할 일·자료(원문 포함)·코멘트를 한 번에 |
+| `/hq/settings` | 설정·백업: AI 상태, 데이터 백업 다운로드 / 복원 |
+
+비서는 할 일 조언 외에 **사업 점검**(사업 상세의 ✦ 비서 점검 요청)과 **주간 회고**(사령부의 주간 회고 생성)도 씁니다.
 
 ## 실행
 
@@ -47,6 +51,20 @@ npm run dev                  # http://localhost:3000
 
 파일은 브라우저에서 파싱되며 선택한 항목만 서버로 전송됩니다.
 
+## 배포 (Docker)
+
+```bash
+docker build -t rorop-hq .
+docker run -d --name rorop-hq -p 3000:3000 \
+  -e JWT_SECRET='최소 16자 이상의 비밀값' \
+  -e ANTHROPIC_API_KEY='sk-ant-...' \
+  -e TZ=Asia/Seoul \
+  -v rorop-data:/app/data \
+  rorop-hq
+```
+
+데이터는 `/app/data/store.json` 한 파일입니다. 이사할 때는 `/hq/settings`에서 백업을 내려받고, 새 서버에서 **먼저 계정을 등록한 뒤** `/hq/settings`에서 복원하면 됩니다 (백업에는 계정·비밀번호가 없습니다). `store.json`을 통째로 복사하면 계정까지 그대로 옮겨집니다.
+
 ## 구조
 
 ```
@@ -55,7 +73,7 @@ src/lib/hq/types.ts        도메인 타입 + API 응답 타입
 src/lib/hq/service.ts      사업/할 일/코멘트/자료 도메인 로직
 src/lib/hq/secretary.ts    Claude 호출 (분석, 대화, 브리핑, 조언) — @anthropic-ai/sdk
 src/lib/hq/claude-export.ts Claude 내보내기 파서 (브라우저/서버 공용)
-src/app/api/hq/**          REST 라우트
+src/app/api/hq/**          REST 라우트 (search, backup, ventures/:id/review, secretary/briefing{kind} 포함)
 src/app/hq/**              화면
 src/components/hq/**       UI 킷, 사이드바, 체크리스트, 코멘트 스레드
 db/schema.sql              PostgreSQL 전환 시 참고용 스키마

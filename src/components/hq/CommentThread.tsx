@@ -17,9 +17,13 @@ interface Props {
   onAskSecretary?: () => Promise<Comment>;
   aiEnabled?: boolean;
   title?: string;
+  /** Label of the ask-secretary button. */
+  askLabel?: string;
+  /** One-line explanation shown under the header (e.g. what the secretary button does). */
+  hint?: string;
 }
 
-export default function CommentThread({ targetType, targetId, comments, onChange, onAskSecretary, aiEnabled = true, title = "코멘트" }: Props) {
+export default function CommentThread({ targetType, targetId, comments, onChange, onAskSecretary, aiEnabled = true, title = "코멘트", askLabel = "✦ 비서에게 조언 요청", hint }: Props) {
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [posting, setPosting] = useState(false);
@@ -85,11 +89,12 @@ export default function CommentThread({ targetType, targetId, comments, onChange
           {title} <span className="text-gray-400 font-normal text-sm">{comments.length}</span>
         </h3>
         {onAskSecretary && (
-          <Button size="sm" variant="secondary" onClick={ask} loading={asking} disabled={!aiEnabled} title={aiEnabled ? "" : "AI 비서가 비활성화되어 있습니다"}>
-            ✦ 비서에게 조언 요청
+          <Button size="sm" variant="secondary" onClick={ask} loading={asking} disabled={!aiEnabled} title={aiEnabled ? "" : "AI 비서가 꺼져 있습니다. ANTHROPIC_API_KEY를 설정하세요."}>
+            {askLabel}
           </Button>
         )}
       </div>
+      {hint && <p className="text-xs text-gray-500 -mt-1 mb-3">{hint}</p>}
       <ErrorBanner message={error} onClose={() => setError("")} />
       {comments.length === 0 ? (
         <p className="text-sm text-gray-400 py-3">아직 코멘트가 없습니다. 진행 상황, 결정, 막힌 점을 기록하세요.</p>
@@ -106,7 +111,7 @@ export default function CommentThread({ targetType, targetId, comments, onChange
                 </span>
                 <span className="flex items-center gap-2 text-xs text-gray-400">
                   {relativeTime(c.created_at)}
-                  <button onClick={() => remove(c.id)} className="hover:text-red-500" aria-label="삭제">
+                  <button type="button" onClick={() => remove(c.id)} className="hover:text-red-500" aria-label="삭제">
                     ✕
                   </button>
                 </span>

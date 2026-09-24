@@ -7,11 +7,12 @@ import { cx } from "./ui";
 import type { HqUser } from "./HqUserContext";
 
 const NAV = [
-  { href: "/hq", label: "사령부", icon: "◎", exact: true, also: [] as string[] },
+  { href: "/hq", label: "사령부", icon: "◎", exact: true, also: ["/hq/search"] },
   { href: "/hq/ventures", label: "사업", icon: "▣", also: [] as string[] },
   { href: "/hq/tasks", label: "할 일", icon: "☑", also: [] as string[] },
   { href: "/hq/secretary", label: "비서", icon: "✦", also: [] as string[] },
   { href: "/hq/import", label: "Claude 가져오기", icon: "⇩", also: ["/hq/knowledge"] },
+  { href: "/hq/settings", label: "설정 · 백업", icon: "⚙", also: [] as string[] },
 ];
 
 const EXTERNAL = [{ href: "/dashboard", label: "디자인 리비전 관리", icon: "◫" }];
@@ -20,10 +21,11 @@ export default function Sidebar({ user }: { user: HqUser }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   const matches = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const isActive = (item: { href: string; exact?: boolean; also: string[] }) =>
-    item.exact ? pathname === item.href : matches(item.href) || item.also.some(matches);
+    (item.exact ? pathname === item.href : matches(item.href)) || item.also.some(matches);
 
   async function handleLogout() {
     try {
@@ -36,6 +38,28 @@ export default function Sidebar({ user }: { user: HqUser }) {
     router.push("/login");
     router.refresh();
   }
+
+  const search = (
+    <form
+      className="mb-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const q = query.trim();
+        if (!q) return;
+        setOpen(false);
+        router.push(`/hq/search?q=${encodeURIComponent(q)}`);
+      }}
+    >
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="검색 (사업·할 일·자료·코멘트)"
+        aria-label="전체 검색"
+        className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+    </form>
+  );
 
   const nav = (
     <nav className="flex flex-col gap-1">
@@ -92,6 +116,7 @@ export default function Sidebar({ user }: { user: HqUser }) {
       {open && (
         <div className="lg:hidden fixed inset-0 z-20 bg-black/50" onClick={() => setOpen(false)}>
           <aside className="absolute top-12 left-0 right-0 bg-gray-900 p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            {search}
             {nav}
             {footer}
           </aside>
@@ -105,6 +130,7 @@ export default function Sidebar({ user }: { user: HqUser }) {
           </div>
           <div className="text-xs text-gray-500">나의 비서 · 업무 사령부</div>
         </Link>
+        {search}
         {nav}
         <div className="flex-1" />
         {footer}

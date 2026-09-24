@@ -432,3 +432,60 @@ export async function adviseOnTask(input: AdviseInput): Promise<string> {
   ].join("\n");
   return textCompletion(input.context.userName, user, "medium");
 }
+
+export interface VentureReviewInput {
+  context: SecretaryContext;
+  venture: Venture;
+  tasks: Task[];
+  comments: Comment[];
+  knowledge: { title: string; summary: string; insights: string[] }[];
+}
+
+/** A chief-of-staff review of one venture, returned as markdown for a comment. */
+export async function reviewVenture(input: VentureReviewInput): Promise<string> {
+  const { venture, tasks, comments, knowledge } = input;
+  const open = tasks.filter((t) => t.status !== "done");
+  const done = tasks.filter((t) => t.status === "done");
+  const user = [
+    `## 현재 상태\n${renderContext(input.context)}`,
+    "",
+    "## 점검할 사업",
+    `- 이름: ${venture.name} [${venture.status}/${venture.priority}]`,
+    `- 목표: ${venture.goal || "(없음)"}`,
+    `- 요약: ${venture.summary || "(없음)"}`,
+    `- 태그: ${venture.tags.join(", ") || "(없음)"}`,
+    open.length ? `- 열린 할 일 (${open.length}):\n${open.map((t) => `  - [${t.status}/${t.priority}] ${t.title}${t.due_date ? ` (기한 ${t.due_date})` : ""}`).join("\n")}` : "- 열린 할 일: 없음",
+    done.length ? `- 완료한 할 일 (${done.length}): ${done.slice(0, 10).map((t) => t.title).join(", ")}${done.length > 10 ? " 외" : ""}` : "- 완료한 할 일: 없음",
+    comments.length ? `- 코멘트:\n${comments.slice(-10).map((c) => `  - [${c.author === "user" ? "사용자" : "비서"}] ${clip(c.body, 240)}`).join("\n")}` : "- 코멘트: 없음",
+    knowledge.length
+      ? `- 연결된 자료:\n${knowledge.slice(0, 8).map((k) => `  - ${k.title}${k.summary ? `: ${clip(k.summary, 200)}` : ""}${k.insights.length ? ` / 관찰: ${clip(k.insights.join("; "), 160)}` : ""}`).join("\n")}`
+      : "- 연결된 자료: 없음",
+    "",
+    "이 사업을 수석 비서로서 점검하세요. 구성: **진단** (지금 어디에 있는가, 한두 문장), **리스크** (최대 3개), **다음 행동 3가지** (구체적, 기한 제안 포함), **결정이 필요한 것** (있다면). 350자 내외, 마크다운 불릿.",
+  ].join("\n");
+  return textCompletion(input.context.userName, user, "medium");
+}
+
+/** Weekly retrospective + next-week plan, returned as markdown. */
+export async function generateWeeklyReview(context: SecretaryContext): Promise<string> {
+  const weekAgo = new Date(`${context.today}T00:00:00Z`);
+  weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+  const since = weekAgo.toISOString().slice(0, 10);
+  const doneThisWeek = context.tasks.filter((t) => t.status === "done" && (t.completed_at || "").slice(0, 10) >= since);
+  const createdThisWeek = context.tasks.filter((t) => t.created_at.slice(0, 10) >= since);
+  const user = [
+    `## 현재 상태\n${renderContext(context)}`,
+    "",
+    `## 지난 7일 (${since} ~ ${context.today})`,
+    doneThisWeek.length ? `- 완료 (${doneThisWeek.length}): ${doneThisWeek.map((t) => t.title).join(", ")}` : "- 완료한 할 일 없음",
+    `- 새로 등록된 할 일: ${createdThisWeek.length}개`,
+    "",
+    "주간 회고를 마크다운으로 작성하세요. 구성:",
+    "1. **이번 주 성과** — 무엇이 실제로 진전됐는가 (사업별).",
+    "2. **못 한 것과 이유** — 기한을 넘기거나 멈춘 것, 패턴이 보이면 지적.",
+    "3. **다음 주 3대 목표** — 사업 성장에 가장 큰 영향을 주는 것 3개, 각각 첫 행동과 기한.",
+    "4. **비서의 직언** — 이번 주를 보고 반드시 바꿔야 할 한 가지.",
+    "전체 600자 내외. 데이터가 적으면 무엇을 기록해야 다음 회고가 유용해질지 제안하세요.",
+  ].join("\n");
+  return textCompletion(context.userName, user, "high");
+}

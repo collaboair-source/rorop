@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
-import type { Comment, KnowledgeKind, KnowledgeListItem, Priority, TaskWithVenture, VentureStatus, VentureWithStats } from "@/lib/hq/types";
+import type { Comment, KnowledgeKind, KnowledgeListItem, Priority, StatusResponse, TaskWithVenture, VentureStatus, VentureWithStats } from "@/lib/hq/types";
 import { PRIORITIES, PRIORITY_LABEL, VENTURE_STATUSES, VENTURE_STATUS_LABEL } from "@/lib/hq/types";
 import { formatDate, relativeTime } from "@/lib/hq/format";
 import {
@@ -117,6 +117,9 @@ function VentureDetail() {
   const [taskError, setTaskError] = useState("");
   const [hideDone, setHideDone] = useState(false);
 
+  // 비서 점검: 상태를 모르면 켜진 것으로 간주 (다른 페이지와 동일)
+  const [aiEnabled, setAiEnabled] = useState(true);
+
   // State updates happen only inside promise callbacks so this is safe to call from effects and handlers.
   const load = useCallback(
     () =>
@@ -141,6 +144,20 @@ function VentureDetail() {
     if (!id) return;
     void load();
   }, [id, load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/hq/status")
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = (await res.json()) as StatusResponse;
+        if (!cancelled) setAiEnabled(data.ai_enabled);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function reload() {
     setLoading(true);
@@ -293,6 +310,13 @@ function VentureDetail() {
     } finally {
       setAddingTask(false);
     }
+  }
+
+  // ---------- 비서 점검 ----------
+  async function askReview(): Promise<Comment> {
+    const res = await fetch(`/api/hq/ventures/${id}/review`, { method: "POST" });
+    const data = await parseResponse<{ comment: Comment }>(res, "비서 점검을 요청하지 못했습니다");
+    return data.comment;
   }
 
   function onTaskChange(updated: TaskWithVenture) {
@@ -597,7 +621,17 @@ function VentureDetail() {
         {/* 오른쪽 1열 */}
         <div className="space-y-6 min-w-0">
           <Card>
-            <CommentThread targetType="venture" targetId={venture.id} comments={comments} onChange={setComments} />
+            <CommentThread
+              targetType="venture"
+              targetId={venture.id}
+              comments={comments}
+              onChange={setComments}
+              onAskSecretary={askReview}
+              askLabel="✦ 비서 점검 요청"
+              aiEnabled={aiEnabled}
+              title="코멘트"
+              hint="비서 점검은 사업 진단·리스크·다음 행동 3가지를 코멘트로 남깁니다."
+            />
           </Card>
 
           <Card

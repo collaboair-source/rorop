@@ -13,7 +13,10 @@ export const GET = handler(async () => {
   const allTasks = getStore().tasks.filter((x) => x.user_id === userId);
   const ventures = listVentures(userId).map((v) => ventureStats(userId, v));
   const knowledge = listKnowledge(userId);
-  const briefing = getStore().briefings.find((b) => b.user_id === userId && b.date === today) || null;
+  const briefing = getStore().briefings.find((b) => b.user_id === userId && b.date === today && (b.kind || "daily") === "daily") || null;
+  const weekly = getStore()
+    .briefings.filter((b) => b.user_id === userId && b.kind === "weekly")
+    .sort((a, b) => b.date.localeCompare(a.date))[0] || null;
 
   const body: OverviewResponse = {
     user: { id: user.id, name: user.name, email: user.email },
@@ -41,6 +44,7 @@ export const GET = handler(async () => {
       return rank[a.status] - rank[b.status] || a.priority.localeCompare(b.priority);
     }),
     briefing,
+    weekly_review: weekly,
     recent_comments: recentComments(userId, 8),
   };
   return json(body);

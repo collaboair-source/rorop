@@ -48,6 +48,8 @@ for (const [label, viewport] of [["desktop", { width: 1280, height: 900 }], ["mo
     ["secretary", "/hq/secretary"],
     ["import", "/hq/import"],
     ["knowledge-detail", `/hq/knowledge/${seed.k}`],
+    ["search", "/hq/search?q=" + encodeURIComponent("로고")],
+    ["settings", "/hq/settings"],
   ];
   for (const [name, path] of pages) {
     await page.goto(`${BASE}${path}`);

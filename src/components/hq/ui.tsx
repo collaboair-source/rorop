@@ -101,7 +101,7 @@ export function StatTile({ label, value, tone = "default", href }: { label: stri
 // ---------- form controls ----------
 
 type ButtonProps = ComponentProps<"button"> & {
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "danger-solid";
   size?: "sm" | "md";
   loading?: boolean;
 };
@@ -114,8 +114,9 @@ export function Button({ variant = "primary", size = "md", loading, className, c
     secondary: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50",
     ghost: "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
     danger: "bg-white text-red-600 border border-red-200 hover:bg-red-50",
+    "danger-solid": "bg-red-600 text-white hover:bg-red-700",
   }[variant];
-  const spinner = variant === "primary" ? "border-white/40 border-t-white" : "border-gray-300 border-t-gray-700";
+  const spinner = variant === "primary" || variant === "danger-solid" ? "border-white/40 border-t-white" : "border-gray-300 border-t-gray-700";
   return (
     <button className={cx(base, sizes, variants, className)} disabled={disabled || loading} {...rest}>
       {loading && <Spinner className={cx("h-3.5 w-3.5", spinner)} />}

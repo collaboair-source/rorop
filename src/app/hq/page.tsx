@@ -23,7 +23,7 @@ import {
 } from "@/components/hq/ui";
 import type { Briefing, CommentWithTarget, OverviewResponse, Priority, TaskWithVenture, VentureWithStats } from "@/lib/hq/types";
 import { PRIORITIES, PRIORITY_LABEL } from "@/lib/hq/types";
-import { daysUntil, formatDateTime, localDateKey, relativeTime, truncate } from "@/lib/hq/format";
+import { daysUntil, formatDate, formatDateTime, localDateKey, relativeTime, truncate } from "@/lib/hq/format";
 
 type TaskLists = OverviewResponse["tasks"];
 type ListKey = keyof TaskLists;
@@ -112,6 +112,8 @@ export default function HqCommandCenterPage() {
   const [loadError, setLoadError] = useState("");
   const [generating, setGenerating] = useState(false);
   const [briefError, setBriefError] = useState("");
+  const [weeklyGenerating, setWeeklyGenerating] = useState(false);
+  const [weeklyError, setWeeklyError] = useState("");
 
   // State updates happen only inside promise callbacks so this is safe to call from effects and handlers.
   const load = useCallback(
@@ -153,6 +155,26 @@ export default function HqCommandCenterPage() {
       setBriefError(errorMessage(err, "브리핑을 생성하지 못했습니다"));
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function generateWeekly() {
+    if (!aiEnabled || weeklyGenerating) return;
+    setWeeklyGenerating(true);
+    setWeeklyError("");
+    try {
+      const res = await fetch("/api/hq/secretary/briefing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "weekly" }),
+      });
+      if (!res.ok) throw new Error(await readError(res, "주간 회고를 생성하지 못했습니다"));
+      const body = (await res.json()) as { briefing: Briefing };
+      setData((prev) => (prev ? { ...prev, weekly_review: body.briefing } : prev));
+    } catch (err) {
+      setWeeklyError(errorMessage(err, "주간 회고를 생성하지 못했습니다"));
+    } finally {
+      setWeeklyGenerating(false);
     }
   }
 
@@ -219,6 +241,14 @@ export default function HqCommandCenterPage() {
     </span>
   );
 
+  const weeklyButton = (label: string, variant: "primary" | "ghost" = "primary") => (
+    <span title={aiEnabled ? undefined : AI_OFF_COPY} className="inline-flex">
+      <Button variant={variant} size={variant === "ghost" ? "sm" : "md"} onClick={generateWeekly} loading={weeklyGenerating} disabled={!aiEnabled || !data}>
+        {label}
+      </Button>
+    </span>
+  );
+
   return (
     <div>
       <PageHeader title={`${user.name}님, ${greetingDate()}`} subtitle={subtitle} actions={generateButton("✦ 오늘의 브리핑 생성")} />
@@ -262,35 +292,69 @@ export default function HqCommandCenterPage() {
             <StatTile label="미분석 자료" value={data.stats.knowledge_unanalyzed} tone={data.stats.knowledge_unanalyzed > 0 ? "accent" : "default"} href="/hq/import" />
           </div>
 
-          {/* 3. Today's briefing */}
-          <Card
-            title="✦ 오늘의 브리핑"
-            actions={
-              data.briefing ? (
+          {/* 3. Today's briefing + weekly review */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card
+              title="✦ 오늘의 브리핑"
+              actions={
+                data.briefing ? (
+                  <>
+                    <span className="hidden sm:inline text-xs text-gray-400">{formatDateTime(data.briefing.created_at)} 생성</span>
+                    {generateButton("다시 생성", "ghost")}
+                  </>
+                ) : undefined
+              }
+            >
+              <ErrorBanner message={briefError} onClose={() => setBriefError("")} />
+              {!aiEnabled && (
+                <p className="mb-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2">{AI_OFF_COPY}</p>
+              )}
+              {data.briefing ? (
                 <>
-                  <span className="hidden sm:inline text-xs text-gray-400">{formatDateTime(data.briefing.created_at)} 생성</span>
-                  {generateButton("다시 생성", "ghost")}
+                  <RichText text={data.briefing.content} />
+                  <p className="sm:hidden text-xs text-gray-400 mt-3">{formatDateTime(data.briefing.created_at)} 생성</p>
                 </>
-              ) : undefined
-            }
-          >
-            <ErrorBanner message={briefError} onClose={() => setBriefError("")} />
-            {!aiEnabled && (
-              <p className="mb-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2">{AI_OFF_COPY}</p>
-            )}
-            {data.briefing ? (
-              <>
-                <RichText text={data.briefing.content} />
-                <p className="sm:hidden text-xs text-gray-400 mt-3">{formatDateTime(data.briefing.created_at)} 생성</p>
-              </>
-            ) : (
-              <EmptyState
-                title="아직 오늘의 브리핑이 없습니다"
-                hint="비서가 기한, 우선순위, 사업 현황을 종합해 오늘 처리할 순서를 제안합니다."
-                action={aiEnabled ? generateButton("✦ 오늘의 브리핑 생성") : undefined}
-              />
-            )}
-          </Card>
+              ) : (
+                <EmptyState
+                  title="아직 오늘의 브리핑이 없습니다"
+                  hint="비서가 기한, 우선순위, 사업 현황을 종합해 오늘 처리할 순서를 제안합니다."
+                  action={aiEnabled ? generateButton("✦ 오늘의 브리핑 생성") : undefined}
+                />
+              )}
+            </Card>
+
+            <Card
+              title="✦ 주간 회고"
+              actions={
+                data.weekly_review ? (
+                  <>
+                    <span className="hidden sm:inline text-xs text-gray-400">{formatDate(data.weekly_review.date)} 기준</span>
+                    {weeklyButton("다시 생성", "ghost")}
+                  </>
+                ) : undefined
+              }
+            >
+              <ErrorBanner message={weeklyError} onClose={() => setWeeklyError("")} />
+              {!aiEnabled && (
+                <p className="mb-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2">{AI_OFF_COPY}</p>
+              )}
+              {data.weekly_review ? (
+                <>
+                  <RichText text={data.weekly_review.content} />
+                  <p className="text-xs text-gray-400 mt-3">
+                    <span className="sm:hidden">{formatDate(data.weekly_review.date)} 기준 · </span>
+                    {formatDateTime(data.weekly_review.created_at)} 생성
+                  </p>
+                </>
+              ) : (
+                <EmptyState
+                  title="아직 주간 회고가 없습니다"
+                  hint="지난 7일 성과, 못 한 것, 다음 주 3대 목표를 정리합니다."
+                  action={aiEnabled ? weeklyButton("✦ 주간 회고 생성") : undefined}
+                />
+              )}
+            </Card>
+          </div>
 
           {/* 4. Focus + ventures/comments */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
